@@ -1,0 +1,21 @@
+{
+  "name": "your-project",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "",
+  "scripts": {
+    "build": "npx fuckyea build",
+    "deploy": "npx fuckyea deploy",
+    "test": "npx fuckyea test"
+  },
+  "devDependencies": {
+    "@eosnetwork/vert": "^1.2.3",
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.10.7",
+    "chai": "^4.3.10",
+    "mocha": "^10.2.0",
+    "ts-node": "^10.7.0",
+    "typescript": "^4.6.3"
+  }
+}

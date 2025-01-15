@@ -1,0 +1,7 @@
+.env
+.vscode
+.idea
+node_modules
+build
+.fuckyea_id
+bun.lockb
