@@ -9,7 +9,7 @@
 
 module.exports = async (deployer) => {
 
-    const contract = await deployer.deploy('youraccount', 'build/contract', {
+    const contract = await deployer.deploy('mustbenothin', 'build/system', {
         // adds the `eosio.code` permission to the contract account's active permission
         // so that you can send inline actions from the contract in its name
         addCode: true
@@ -17,6 +17,10 @@ module.exports = async (deployer) => {
         console.error(err)
         process.exit(1);
     })
+
+    const MAX_SUPPLY = 2100000000;
+    const maxSupply = `${MAX_SUPPLY}.0000 XYZ`;
+    await contract.actions.init([maxSupply]).send('mustbenothin@active');
 
     // do other stuff here...
 }
