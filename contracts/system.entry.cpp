@@ -71,15 +71,14 @@ class [[eosio::contract("system")]] system_contract : public contract {
             sub_balance( from, quantity );
             add_balance( to, quantity, payer );
 
-
             require_recipient( from );
+            require_recipient( to );
 
             // If `from` is sending XYZ tokens to this contract
             // they are swapping from XYZ to EOS
             if(to == get_self()) {
+                check(quantity.symbol == get_token_symbol(), "Wrong token used");
                 credit_eos_to(from, quantity);
-            } else {
-                require_recipient( to );
             }
         }
 
