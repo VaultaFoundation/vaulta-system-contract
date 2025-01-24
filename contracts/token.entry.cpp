@@ -135,7 +135,7 @@ void token::sub_balance( const name& owner, const asset& value ) {
 
    from_acnts.modify( from, owner, [&]( auto& a ) {
          a.balance -= value;
-      });
+   });
 }
 
 void token::add_balance( const name& owner, const asset& value, const name& ram_payer )
