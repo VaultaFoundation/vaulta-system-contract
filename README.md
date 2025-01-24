@@ -8,6 +8,38 @@ There are three primary functions of this contract:
 - Token swap
 - System wrapper
 
+See below for more information.
+
+### Installing, building, and testing
+
+To install the dependencies, run:
+
+```bash
+npm install
+# or 
+yarn
+# or (preferred)
+bun install
+```
+
+To build the contract, run:
+
+```bash
+npx fuckyea build
+```
+
+To test the contracts
+    
+```bash
+npx fuckyea test
+```
+
+To deploy the contract, run:
+
+```bash
+npx fuckyea deploy <network>
+```
+
 ## XYZ Token
 
 The XYZ token has the standard token functions and data structures.
