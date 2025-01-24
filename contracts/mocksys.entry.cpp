@@ -12,8 +12,6 @@ CONTRACT mocksys : public contract {
 
         static constexpr symbol EOS = symbol("EOS", 4);
 
-
-
 		struct [[eosio::table]] rex_pool {
 			uint8_t    version = 0;
 			asset      total_lent;
