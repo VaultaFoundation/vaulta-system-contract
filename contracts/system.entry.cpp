@@ -464,8 +464,17 @@ class [[eosio::contract("system")]] system_contract : public contract {
             swap_after_forwarding(owner, asset(amount.amount, EOS));
         }
 
+        ACTION newaccount( const name& creator, const name& account_name, const authority& owner, const authority& active ){
+            action(
+                permission_level{creator, "active"_n},
+                "eosio"_n,
+                "newaccount"_n,
+                std::make_tuple(creator, account_name, owner, active)
+            ).send();
+        }
+
         // Simplified account creation action that only requires a public key instead of 2 authority objects
-        ACTION newaccount( const name& creator, const name& account_name, eosio::public_key key ){
+        ACTION newaccount2( const name& creator, const name& account_name, eosio::public_key key ){
             authority auth = authority{
                 .threshold = 1,
                 .keys = {

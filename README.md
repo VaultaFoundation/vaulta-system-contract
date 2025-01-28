@@ -142,7 +142,8 @@ The available actions are:
 - `mvfrsavings( const name& account, const asset& rex )`
 - `sellrex( const name& owner, const asset& rex )`
 - `withdraw( const name& owner, const asset& amount )`
-- `newaccount( const name& creator, const name& account_name, eosio::public_key key )`
+- `newaccount( const name& creator, const name& account_name, const name& owner, const name& active )`
+- `newaccount2( const name& creator, const name& account_name, eosio::public_key key )`
 - `powerup( const name& payer, const name& receiver, uint32_t days, int64_t net_frac, int64_t cpu_frac, const asset& max_payment )`
 - `delegatebw( const name& from, const name& receiver, const asset& stake_quantity, bool transfer )`
 - `undelegatebw( const name& from, const name& receiver, const asset& unstake_quantity )`
