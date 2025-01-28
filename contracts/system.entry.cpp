@@ -614,4 +614,6 @@ class [[eosio::contract("system")]] system_contract : public contract {
 
             swap_after_forwarding(owner, it->net_amount + it->cpu_amount);
         }
+
+        ACTION noop(){}
 };
