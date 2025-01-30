@@ -8,6 +8,9 @@ There are three primary functions of this contract:
 - Token swap
 - System wrapper
 
+The main contract is at `/contracts/system.entry.cpp`. 
+All other cpp files are for testing purposes. 
+
 See below for more information.
 
 ### Installing, building, and testing
