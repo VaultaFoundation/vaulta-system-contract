@@ -183,6 +183,50 @@ class [[eosio::contract("system")]] system_contract : public contract {
             ).send();
         }
 
+        // This action allows exchanges to support "swap & withdraw" for their users and have the swapped tokens flow
+        // to the users instead of to their own hot wallets.
+        ACTION swapto(const name& from, const name& to, const asset& quantity, const std::string& memo) {
+            require_auth(from);
+            check(quantity.amount > 0, "Swap amount must be greater than 0");
+            check(memo.size() <= 256, "Memo has more than 256 bytes");
+
+            if(quantity.symbol == EOS){
+                // First swap the EOS to XYZ and credit it to the user
+                action(
+                    permission_level{from, "active"_n},
+                    "eosio.token"_n,
+                    "transfer"_n,
+                    std::make_tuple(from, get_self(), asset(quantity.amount, EOS), memo)
+                ).send();
+
+                // Then transfer the swapped XYZ to the target account
+                action(
+                    permission_level{from, "active"_n},
+                    get_self(),
+                    "transfer"_n,
+                    std::make_tuple(from, to, asset(quantity.amount, get_token_symbol()), memo)
+                ).send();
+            } else if (quantity.symbol == get_token_symbol()) {
+                // First swap the XYZ to EOS and credit it to the user
+                action(
+                    permission_level{from, "active"_n},
+                    get_self(),
+                    "transfer"_n,
+                    std::make_tuple(from, get_self(), asset(quantity.amount, get_token_symbol()), memo)
+                ).send();
+
+                // Then transfer the swapped EOS to the target account
+                action(
+                    permission_level{from, "active"_n},
+                    "eosio.token"_n,
+                    "transfer"_n,
+                    std::make_tuple(from, to, asset(quantity.amount, EOS), memo)
+                ).send();
+            } else {
+                check(false, "Invalid symbol");
+            }
+        }
+
 
 
         // ----------------------------------------------------
