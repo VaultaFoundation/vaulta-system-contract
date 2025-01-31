@@ -187,8 +187,6 @@ class [[eosio::contract("system")]] system_contract : public contract {
         // to the users instead of to their own hot wallets.
         ACTION swapto(const name& from, const name& to, const asset& quantity, const std::string& memo) {
             require_auth(from);
-            check(quantity.amount > 0, "Swap amount must be greater than 0");
-            check(memo.size() <= 256, "Memo has more than 256 bytes");
 
             if(quantity.symbol == EOS){
                 // First swap the EOS to XYZ and credit it to the user
