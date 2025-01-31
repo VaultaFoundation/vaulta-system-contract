@@ -139,12 +139,12 @@ The `swapto` action is similar to the `transfer` action but based on the token y
 the contract will swap the token to the other token and send it to the `to` account.
 
 Examples:
-- **Exchange** sends `100 EOS` to the contract account with **User** as the `to` account
+- **Exchange** uses `swapto` with `100 EOS` as the quantity and **User** as the `to` account
 - The contract swaps the `100 EOS` to `100 XYZ` and sends it to **User**
 
 -- or --
 
-- **Exchange** sends `100 XYZ` to the contract account with **User** as the `to` account
+- **Exchange** uses `swapto` with `100 XYZ` as the quantity and **User** as the `to` account
 - The contract swaps the `100 XYZ` to `100 EOS` and sends it to **User**
 
 ## System Wrapper
