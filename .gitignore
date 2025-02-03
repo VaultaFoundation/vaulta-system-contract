@@ -3,5 +3,6 @@
 .idea
 node_modules
 build
+build_*
 .fuckyea_id
-bun.lockb
+bun.lock*
