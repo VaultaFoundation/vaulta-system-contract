@@ -26,6 +26,10 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
    transfer(eos_name, alice, eos("1000.0000"), eos_name);
    transfer(eos_name, bob,   eos("1000.0000"), eos_name);
 
+   // check that we do start with 2.1B XYZ in XYZ's account (`init` action called in deploy_contract)
+   // -----------------------------------------------------------------------------------------------
+   BOOST_REQUIRE_EQUAL(get_balance(xyz_name, xyz_symbol()), xyz("2100000000.0000"));
+
    // swap EOS for XYZ, check that sent EOS was converted to XYZ
    // ----------------------------------------------------------
    transfer(alice, xyz_name, eos("100.0000"), alice);

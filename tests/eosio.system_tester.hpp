@@ -57,7 +57,6 @@ public:
          bpay_abi_ser.set_abi(abi, abi_serializer::create_yield_function(abi_serializer_max_time));
       }
 
-      create_accounts({xyz_name});
    }
 
    void create_core_token( symbol core_symbol = symbol{CORE_SYM} ) {
@@ -79,10 +78,12 @@ public:
       }
 
       
+      create_account_with_resources(xyz_name, config::system_account_name, 1000000);
       set_code( xyz_name, xyz_contracts::system_wasm());
       set_abi( xyz_name, xyz_contracts::system_abi().data() );
+
       if( call_init ) {
-         base_tester::push_action(xyz_name, "init"_n, xyz_name,
+         base_tester::push_action(xyz_name, "init"_n, {config::system_account_name, xyz_name},
                                   mutable_variant_object()("maximum_supply", xyz("2100000000.0000")));
       }
 
