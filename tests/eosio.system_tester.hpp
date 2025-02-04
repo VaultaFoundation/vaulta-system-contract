@@ -19,12 +19,13 @@ namespace eosio_system {
 
 class eosio_system_tester : public validating_tester {
 public:
-
+   static constexpr account_name xyz_account_name = "xyz"_n;
+   
    void basic_setup() {
       produce_block();
 
-      create_accounts({ "eosio.token"_n, "eosio.ram"_n, "eosio.ramfee"_n, "eosio.stake"_n,
-               "eosio.bpay"_n, "eosio.vpay"_n, "eosio.saving"_n, "eosio.names"_n, "eosio.rex"_n, "eosio.fees"_n });
+      create_accounts({"eosio.token"_n, "eosio.ram"_n, "eosio.ramfee"_n, "eosio.stake"_n, "eosio.bpay"_n,
+                       "eosio.vpay"_n, "eosio.saving"_n, "eosio.names"_n, "eosio.rex"_n, "eosio.fees"_n});
 
 
       produce_blocks( 100 );
@@ -48,6 +49,8 @@ public:
          BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
          bpay_abi_ser.set_abi(abi, abi_serializer::create_yield_function(abi_serializer_max_time));
       }
+
+      create_accounts({xyz_account_name});
    }
 
    void create_core_token( symbol core_symbol = symbol{CORE_SYM} ) {
@@ -66,6 +69,14 @@ public:
                                                ("version", 0)
                                                ("core", CORE_SYM_STR)
          );
+      }
+
+      
+      set_code( "xyz"_n, xyz_contracts::system_wasm());
+      set_abi( "xyz"_n, xyz_contracts::system_abi().data() );
+      if( call_init ) {
+         base_tester::push_action(xyz_account_name, "init"_n, xyz_account_name,
+                                  mutable_variant_object()("version", 0)("core", CORE_SYM_STR));
       }
 
       {
