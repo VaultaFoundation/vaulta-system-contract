@@ -4,8 +4,6 @@ set(EOSIO_VERSION_MIN "1.0")
 set(EOSIO_VERSION_SOFT_MAX "1.0")
 # set(EOSIO_VERSION_HARD_MAX "")
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON INTERNAL "")
-
 find_package(spring)
 
 # Check the version of Spring
