@@ -76,7 +76,7 @@ public:
       set_abi( "xyz"_n, xyz_contracts::system_abi().data() );
       if( call_init ) {
          base_tester::push_action(xyz_account_name, "init"_n, xyz_account_name,
-                                  mutable_variant_object()("version", 0)("core", CORE_SYM_STR));
+                                  mutable_variant_object()("maximum_supply", xyz_core_sym::from_string("2100000000.0000")));
       }
 
       {

@@ -14,3 +14,9 @@ struct core_sym {
      return eosio::chain::asset::from_string(s + " " CORE_SYM_NAME);
    }
 };
+
+struct xyz_core_sym {
+   static inline eosio::chain::asset from_string(const std::string& s) {
+     return eosio::chain::asset::from_string(s + " XYZ");
+   }
+};
