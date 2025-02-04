@@ -80,10 +80,10 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_ram_validate, eosio_system_tester ) try {
 {
    "payer": "alice",
    "receiver": "alice",
-   "quantity": "0.1462 TST",
+   "quantity": "0.1462 EOS",
    "bytes_purchased": 9991,
    "ram_bytes": 17983,
-   "fee": "0.0008 TST"
+   "fee": "0.0008 EOS"
 }
 )=====";
    validate_buyrambytes_return(alice, alice, 10000,
@@ -92,10 +92,10 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_ram_validate, eosio_system_tester ) try {
    const char* expected_sellram_return_data = R"=====(
 {
    "account": "alice",
-   "quantity": "0.1455 TST",
+   "quantity": "0.1455 EOS",
    "bytes_sold": 10000,
    "ram_bytes": 7983,
-   "fee": "0.0008 TST"
+   "fee": "0.0008 EOS"
 }
 )=====";
    validate_sellram_return(alice, 10000,
@@ -105,10 +105,10 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_ram_validate, eosio_system_tester ) try {
 {
    "payer": "bob",
    "receiver": "alice",
-   "quantity": "2.0000 TST",
+   "quantity": "2.0000 EOS",
    "bytes_purchased": 136750,
    "ram_bytes": 144733,
-   "fee": "0.0100 TST"
+   "fee": "0.0100 EOS"
 
 }
 )=====";
@@ -133,10 +133,10 @@ BOOST_FIXTURE_TEST_CASE( ram_burn, eosio_system_tester ) try {
 {
    "payer": "bob",
    "receiver": "bob",
-   "quantity": "10.0000 TST",
+   "quantity": "10.0000 EOS",
    "bytes_purchased": 683747,
    "ram_bytes": 691739,
-   "fee": "0.0500 TST"
+   "fee": "0.0500 EOS"
 }
 )=====";
    validate_buyramself_return(bob, core_sym::from_string("10.0000"),
@@ -159,7 +159,7 @@ BOOST_FIXTURE_TEST_CASE( ram_burn, eosio_system_tester ) try {
    "bytes": 1,
    "from_ram_bytes": 691738,
    "to_ram_bytes": 12992,
-   "fee": "1.0000 TST"
+   "fee": "1.0000 EOS"
 }
 )=====";
    validate_ramburn_return(bob, 1, "burn RAM memo",
@@ -177,10 +177,10 @@ BOOST_FIXTURE_TEST_CASE( buy_ram_burn, eosio_system_tester ) try {
 {
    "payer": "alice",
    "receiver": "alice",
-   "quantity": "1.0000 TST",
+   "quantity": "1.0000 EOS",
    "bytes_purchased": 68374,
    "ram_bytes": 86357,
-   "fee": "0.0050 TST"
+   "fee": "0.0050 EOS"
 }
 )=====";
 
@@ -223,10 +223,10 @@ BOOST_FIXTURE_TEST_CASE( buy_ram_self, eosio_system_tester ) try {
 {
    "payer": "alice",
    "receiver": "alice",
-   "quantity": "2.0000 TST",
+   "quantity": "2.0000 EOS",
    "bytes_purchased": 136750,
    "ram_bytes": 213117,
-   "fee": "0.0100 TST"
+   "fee": "0.0100 EOS"
 }
 )=====";
 

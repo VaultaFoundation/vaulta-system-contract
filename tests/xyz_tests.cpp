@@ -15,7 +15,6 @@ using namespace eosio_system;
 
 BOOST_AUTO_TEST_SUITE(xyz_tests);
 
-
 BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
    const std::vector<account_name> accounts = { "alice"_n, "bob"_n };
    create_accounts_with_resources( accounts );
@@ -24,11 +23,15 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
    // fund alice and bob
    // ------------------
-   transfer( eosio_name, alice, eos("1000.0000"), eosio_name );
-   transfer( eosio_name, bob,   eos("1000.0000"), eosio_name );
+   transfer(eos_name, alice, eos("1000.0000"), eos_name);
+   transfer(eos_name, bob,   eos("1000.0000"), eos_name);
 
-   // swap EOS for XYZ
-   transfer(alice, eosio_name, eos("100.0000"), alice);
+   // swap EOS for XYZ, check that sent EOS was converted to XYZ
+   // ----------------------------------------------------------
+   transfer(alice, xyz_name, eos("100.0000"), alice);
+   BOOST_REQUIRE_EQUAL(get_balance(alice, eos_symbol()), eos("900.0000"));
+   BOOST_REQUIRE_EQUAL(get_balance(alice, xyz_symbol()), xyz("100.0000"));
+   
 
 } FC_LOG_AND_RETHROW()
 

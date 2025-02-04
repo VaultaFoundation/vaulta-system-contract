@@ -20,11 +20,13 @@ namespace eosio_system {
 class eosio_system_tester : public validating_tester {
 public:
    static constexpr account_name xyz_name   = "xyz"_n;
-   static constexpr account_name eosio_name = "eosio"_n;
+   static constexpr account_name eos_name = "eosio"_n;
 
-   asset eos(const char* amount) { return core_sym::from_string(amount); }
-   asset xyz(const char* amount) { return xyz_core_sym::from_string(amount); }
+   static asset eos(const char* amount) { return core_sym::from_string(amount); }
+   static asset xyz(const char* amount) { return xyz_core_sym::from_string(amount); }
 
+   static symbol xyz_symbol() { return symbol{XYZ_SYM}; }
+   static symbol eos_symbol() { return symbol{CORE_SYM}; }
 
    void basic_setup() {
       produce_block();
