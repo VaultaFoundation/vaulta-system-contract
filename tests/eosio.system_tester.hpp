@@ -19,8 +19,13 @@ namespace eosio_system {
 
 class eosio_system_tester : public validating_tester {
 public:
-   static constexpr account_name xyz_account_name = "xyz"_n;
-   
+   static constexpr account_name xyz_name   = "xyz"_n;
+   static constexpr account_name eosio_name = "eosio"_n;
+
+   asset eos(const char* amount) { return core_sym::from_string(amount); }
+   asset xyz(const char* amount) { return xyz_core_sym::from_string(amount); }
+
+
    void basic_setup() {
       produce_block();
 
@@ -50,7 +55,7 @@ public:
          bpay_abi_ser.set_abi(abi, abi_serializer::create_yield_function(abi_serializer_max_time));
       }
 
-      create_accounts({xyz_account_name});
+      create_accounts({xyz_name});
    }
 
    void create_core_token( symbol core_symbol = symbol{CORE_SYM} ) {
@@ -72,11 +77,11 @@ public:
       }
 
       
-      set_code( "xyz"_n, xyz_contracts::system_wasm());
-      set_abi( "xyz"_n, xyz_contracts::system_abi().data() );
+      set_code( xyz_name, xyz_contracts::system_wasm());
+      set_abi( xyz_name, xyz_contracts::system_abi().data() );
       if( call_init ) {
-         base_tester::push_action(xyz_account_name, "init"_n, xyz_account_name,
-                                  mutable_variant_object()("maximum_supply", xyz_core_sym::from_string("2100000000.0000")));
+         base_tester::push_action(xyz_name, "init"_n, xyz_name,
+                                  mutable_variant_object()("maximum_supply", xyz("2100000000.0000")));
       }
 
       {
