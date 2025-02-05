@@ -28,14 +28,13 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
    // check that we do start with 2.1B XYZ in XYZ's account (`init` action called in deploy_contract)
    // -----------------------------------------------------------------------------------------------
-   BOOST_REQUIRE_EQUAL(get_balance(xyz_name, xyz_symbol()), xyz("2100000000.0000"));
+   BOOST_REQUIRE_EQUAL(get_xyz_balance(xyz_name), xyz("2100000000.0000"));
 
    // swap EOS for XYZ, check that sent EOS was converted to XYZ
    // ----------------------------------------------------------
    transfer(alice, xyz_name, eos("100.0000"), alice);
-   BOOST_REQUIRE_EQUAL(get_balance(alice, eos_symbol()), eos("900.0000"));
-   BOOST_REQUIRE_EQUAL(get_balance(alice, xyz_symbol()), xyz("100.0000"));
-   
+   BOOST_REQUIRE_EQUAL(get_eos_balance(alice), eos("900.0000"));
+   BOOST_REQUIRE_EQUAL(get_xyz_balance(alice), xyz("100.0000"));
 
 } FC_LOG_AND_RETHROW()
 

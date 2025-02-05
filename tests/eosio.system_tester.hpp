@@ -19,7 +19,7 @@ namespace eosio_system {
 
 class eosio_system_tester : public validating_tester {
 public:
-   static constexpr account_name xyz_name   = "xyz"_n;
+   static constexpr account_name xyz_name   = "eosio.xyz"_n;
    static constexpr account_name eos_name = "eosio"_n;
 
    static asset eos(const char* amount) { return core_sym::from_string(amount); }
@@ -28,11 +28,21 @@ public:
    static symbol xyz_symbol() { return symbol{XYZ_SYM}; }
    static symbol eos_symbol() { return symbol{CORE_SYM}; }
 
+   asset get_eos_balance(account_name act) { return get_balance(act, eos_symbol()); }
+
+   asset get_xyz_balance(account_name act) {
+      symbol xyz = xyz_symbol();
+      vector<char> data = get_row_by_account(xyz_name, act, "accounts"_n, account_name(xyz.to_symbol_code().value) );
+      if (data.empty())
+         return asset(0, xyz);
+      return token_abi_ser.binary_to_variant("account", data, abi_serializer_max_time)["balance"].as<asset>();
+   }
+
    void basic_setup() {
       produce_block();
 
       create_accounts({"eosio.token"_n, "eosio.ram"_n, "eosio.ramfee"_n, "eosio.stake"_n, "eosio.bpay"_n,
-                       "eosio.vpay"_n, "eosio.saving"_n, "eosio.names"_n, "eosio.rex"_n, "eosio.fees"_n});
+                       "eosio.vpay"_n, "eosio.saving"_n, "eosio.names"_n, "eosio.rex"_n, "eosio.fees"_n, xyz_name});
 
 
       produce_blocks( 100 );
@@ -78,10 +88,8 @@ public:
       }
 
       
-      create_account_with_resources(xyz_name, config::system_account_name, 1000000);
       set_code( xyz_name, xyz_contracts::system_wasm());
       set_abi( xyz_name, xyz_contracts::system_abi().data() );
-
       if( call_init ) {
          base_tester::push_action(xyz_name, "init"_n, {config::system_account_name, xyz_name},
                                   mutable_variant_object()("maximum_supply", xyz("2100000000.0000")));
