@@ -23,8 +23,8 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
    // fund alice and bob
    // ------------------
-   transfer(eos_name, alice, eos("1000.0000"), eos_name);
-   transfer(eos_name, bob,   eos("1000.0000"), eos_name);
+   eosio_token.transfer(eos_name, alice, eos("1000.0000"));
+   eosio_token.transfer(eos_name, bob,   eos("1000.0000"));
 
    // check that we do start with 2.1B XYZ in XYZ's account (`init` action called in deploy_contract)
    // -----------------------------------------------------------------------------------------------
@@ -32,9 +32,16 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
    // swap EOS for XYZ, check that sent EOS was converted to XYZ
    // ----------------------------------------------------------
-   transfer(alice, xyz_name, eos("100.0000"), alice);
-   BOOST_REQUIRE_EQUAL(get_eos_balance(alice), eos("900.0000"));
-   BOOST_REQUIRE_EQUAL(get_xyz_balance(alice), xyz("100.0000"));
+   eosio_token.transfer(alice, xyz_name, eos("600.0000"));
+   BOOST_REQUIRE_EQUAL(get_eos_balance(alice), eos("400.0000"));
+   BOOST_REQUIRE_EQUAL(get_xyz_balance(alice), xyz("600.0000"));
+
+   // swap XYZ for EOS, check that sent XYZ was converted to EOS
+   // ----------------------------------------------------------
+   eosio_xyz.transfer(alice, xyz_name, xyz("100.0000"));
+   BOOST_REQUIRE_EQUAL(get_eos_balance(alice), eos("500.0000"));
+   BOOST_REQUIRE_EQUAL(get_xyz_balance(alice), xyz("500.0000"));
+
 
 } FC_LOG_AND_RETHROW()
 

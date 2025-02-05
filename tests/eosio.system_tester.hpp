@@ -19,7 +19,7 @@ namespace eosio_system {
 
 class eosio_system_tester : public validating_tester {
 public:
-   static constexpr account_name xyz_name   = "eosio.xyz"_n;
+   static constexpr account_name xyz_name = "eosio.xyz"_n;
    static constexpr account_name eos_name = "eosio"_n;
 
    static asset eos(const char* amount) { return core_sym::from_string(amount); }
@@ -27,6 +27,25 @@ public:
 
    static symbol xyz_symbol() { return symbol{XYZ_SYM}; }
    static symbol eos_symbol() { return symbol{CORE_SYM}; }
+
+   struct contract {
+      contract(account_name name, eosio_system_tester& tester)
+         : _name(name)
+         , _tester(tester) {}
+
+      template <typename... Args>
+      transaction_trace_ptr push_action(Args&&... args) {
+         return static_cast<base_tester&>(_tester).push_action(std::forward<Args>(args)...);
+      }
+
+      void transfer(const name& from, const name& to, const asset& amount) {
+         push_action(_name, "transfer"_n, from,
+                     mutable_variant_object()("from", from)("to", to)("quantity", amount)("memo", ""));
+      }
+
+      account_name         _name;
+      eosio_system_tester& _tester;
+   };
 
    asset get_eos_balance(account_name act) { return get_balance(act, eos_symbol()); }
 
@@ -37,6 +56,9 @@ public:
          return asset(0, xyz);
       return token_abi_ser.binary_to_variant("account", data, abi_serializer_max_time)["balance"].as<asset>();
    }
+
+   contract eosio_token;
+   contract eosio_xyz;
 
    void basic_setup() {
       produce_block();
@@ -122,8 +144,11 @@ public:
       full
    };
 
-   eosio_system_tester( setup_level l = setup_level::full, setup_policy policy = setup_policy::full )
-   : validating_tester({}, nullptr, policy) {
+   eosio_system_tester(setup_level l = setup_level::full, setup_policy policy = setup_policy::full)
+      : validating_tester({}, nullptr, policy)
+      , eosio_token("eosio.token"_n, *this)
+      , eosio_xyz(xyz_name, *this) {
+      
       if( l == setup_level::none ) return;
 
       basic_setup();
