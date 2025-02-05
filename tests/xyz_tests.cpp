@@ -74,7 +74,7 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
         ("memo", "")
     );
     BOOST_REQUIRE_EQUAL(get_balance(swapper), eos("98.0000"));
-    BOOST_REQUIRE_EQUAL(get_balance(user), eos("101.0000"));
+    BOOST_REQUIRE_EQUAL(get_balance(user), eos("100.0000"));
     BOOST_REQUIRE_EQUAL(get_xyz_balance(swapper), xyz("1.0000"));
     BOOST_REQUIRE_EQUAL(get_xyz_balance(user), xyz("1.0000"));
 
