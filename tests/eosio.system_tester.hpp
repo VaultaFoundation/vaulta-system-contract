@@ -30,20 +30,32 @@ public:
 
    struct contract {
       contract(account_name name, eosio_system_tester& tester)
-         : _name(name)
+         : _contract_name(name)
          , _tester(tester) {}
 
+      bytes serialize(abi_serializer& ser, action_name act, const variant_object& data) {
+         string action_type_name = ser.get_action_type(act);
+         return ser.variant_to_binary(action_type_name, data, abi_serializer_max_time);
+      }
+
       template <typename... Args>
-      transaction_trace_ptr push_action(Args&&... args) {
+      auto push_action_to_base(Args&&... args) {
          return static_cast<base_tester&>(_tester).push_action(std::forward<Args>(args)...);
       }
 
-      void transfer(const name& from, const name& to, const asset& amount) {
-         push_action(_name, "transfer"_n, from,
-                     mutable_variant_object()("from", from)("to", to)("quantity", amount)("memo", ""));
+      action_result push_action(account_name signer, action_name act, bytes params) {
+         action action({}, _contract_name, act, std::move(params));
+         return push_action_to_base(std::move(action), signer.to_uint64_t());
       }
 
-      account_name         _name;
+      action_result transfer(name from, name to, const asset& amount) {
+         auto act    = "transfer"_n;
+         auto params = serialize(_tester.token_abi_ser, act,
+                                 mutable_variant_object()("from", from)("to", to)("quantity", amount)("memo", ""));
+         return push_action(from, act, std::move(params));
+      }
+
+      account_name         _contract_name;
       eosio_system_tester& _tester;
    };
 

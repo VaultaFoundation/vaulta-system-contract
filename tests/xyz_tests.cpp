@@ -30,6 +30,12 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
    // -----------------------------------------------------------------------------------------------
    BOOST_REQUIRE_EQUAL(get_xyz_balance(xyz_name), xyz("2100000000.0000"));
 
+   // check that you can't send some XYZ you don't have
+   // -------------------------------------------------
+   BOOST_REQUIRE_EQUAL(get_xyz_balance(alice), xyz("0.0000"));
+   BOOST_REQUIRE_EQUAL(eosio_xyz.transfer(alice, xyz_name, xyz("1.0000")),
+                       error("assertion failure with message: no balance object found"));
+
    // swap EOS for XYZ, check that sent EOS was converted to XYZ
    // ----------------------------------------------------------
    eosio_token.transfer(alice, xyz_name, eos("600.0000"));
