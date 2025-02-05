@@ -183,6 +183,48 @@ class [[eosio::contract("system")]] system_contract : public contract {
             ).send();
         }
 
+        // This action allows exchanges to support "swap & withdraw" for their users and have the swapped tokens flow
+        // to the users instead of to their own hot wallets.
+        ACTION swapto(const name& from, const name& to, const asset& quantity, const std::string& memo) {
+            require_auth(from);
+
+            if(quantity.symbol == EOS){
+                // First swap the EOS to XYZ and credit it to the user
+                action(
+                    permission_level{from, "active"_n},
+                    "eosio.token"_n,
+                    "transfer"_n,
+                    std::make_tuple(from, get_self(), asset(quantity.amount, EOS), memo)
+                ).send();
+
+                // Then transfer the swapped XYZ to the target account
+                action(
+                    permission_level{from, "active"_n},
+                    get_self(),
+                    "transfer"_n,
+                    std::make_tuple(from, to, asset(quantity.amount, get_token_symbol()), memo)
+                ).send();
+            } else if (quantity.symbol == get_token_symbol()) {
+                // First swap the XYZ to EOS and credit it to the user
+                action(
+                    permission_level{from, "active"_n},
+                    get_self(),
+                    "transfer"_n,
+                    std::make_tuple(from, get_self(), asset(quantity.amount, get_token_symbol()), memo)
+                ).send();
+
+                // Then transfer the swapped EOS to the target account
+                action(
+                    permission_level{from, "active"_n},
+                    "eosio.token"_n,
+                    "transfer"_n,
+                    std::make_tuple(from, to, asset(quantity.amount, EOS), memo)
+                ).send();
+            } else {
+                check(false, "Invalid symbol");
+            }
+        }
+
 
 
         // ----------------------------------------------------
@@ -464,8 +506,17 @@ class [[eosio::contract("system")]] system_contract : public contract {
             swap_after_forwarding(owner, asset(amount.amount, EOS));
         }
 
+        ACTION newaccount( const name& creator, const name& account_name, const authority& owner, const authority& active ){
+            action(
+                permission_level{creator, "active"_n},
+                "eosio"_n,
+                "newaccount"_n,
+                std::make_tuple(creator, account_name, owner, active)
+            ).send();
+        }
+
         // Simplified account creation action that only requires a public key instead of 2 authority objects
-        ACTION newaccount( const name& creator, const name& account_name, eosio::public_key key ){
+        ACTION newaccount2( const name& creator, const name& account_name, eosio::public_key key ){
             authority auth = authority{
                 .threshold = 1,
                 .keys = {
@@ -605,4 +656,6 @@ class [[eosio::contract("system")]] system_contract : public contract {
 
             swap_after_forwarding(owner, it->net_amount + it->cpu_amount);
         }
+
+        ACTION noop(std::string memo){}
 };

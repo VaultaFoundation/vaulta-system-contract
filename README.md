@@ -8,6 +8,9 @@ There are three primary functions of this contract:
 - Token swap
 - System wrapper
 
+The main contract is at `/contracts/system.entry.cpp`. 
+All other cpp files are for testing purposes. 
+
 See below for more information.
 
 ### Installing, building, and testing
@@ -117,6 +120,33 @@ will increase, and the XYZ balance will decrease by the same amount.
 > Note: Any tokens that are burned on either side are locked into that side. For instance
 > if EOS is burned, it can never become XYZ, and vice versa.
 
+### Swap & Withdraw
+
+The contract comes with a `swapto` action aimed at allowing exchanges to support withdrawing the EOS token and 
+swapping it to the new token while also sending the swapped token to the user's account instead of crediting it back 
+to the exchange's hot wallet. 
+
+```cpp
+swapto(
+    const name& from, 
+    const name& to, 
+    const asset& quantity, 
+    const std::string& memo
+)
+```
+
+The `swapto` action is similar to the `transfer` action but based on the token you use in the `quantity` parameter,
+the contract will swap the token to the other token and send it to the `to` account.
+
+Examples:
+- **Exchange** uses `swapto` with `100 EOS` as the quantity and **User** as the `to` account
+- The contract swaps the `100 EOS` to `100 XYZ` and sends it to **User**
+
+-- or --
+
+- **Exchange** uses `swapto` with `100 XYZ` as the quantity and **User** as the `to` account
+- The contract swaps the `100 XYZ` to `100 EOS` and sends it to **User**
+
 ## System Wrapper
 
 The system wrapper is a set of actions that allows interaction with the system contracts using
@@ -142,7 +172,8 @@ The available actions are:
 - `mvfrsavings( const name& account, const asset& rex )`
 - `sellrex( const name& owner, const asset& rex )`
 - `withdraw( const name& owner, const asset& amount )`
-- `newaccount( const name& creator, const name& account_name, eosio::public_key key )`
+- `newaccount( const name& creator, const name& account_name, const name& owner, const name& active )`
+- `newaccount2( const name& creator, const name& account_name, eosio::public_key key )`
 - `powerup( const name& payer, const name& receiver, uint32_t days, int64_t net_frac, int64_t cpu_frac, const asset& max_payment )`
 - `delegatebw( const name& from, const name& receiver, const asset& stake_quantity, bool transfer )`
 - `undelegatebw( const name& from, const name& receiver, const asset& unstake_quantity )`
