@@ -26,7 +26,7 @@ if(SYSTEM_ENABLE_SPRING_VERSION_CHECK)
   endif(VERSION_OUTPUT STREQUAL "MATCH")
 endif()
 
-set(EOS_CONTRACTS_BINARY_DIR "/home/greg/github/enf/eos-system-contracts/build_clang18_debug")
+set(EOS_CONTRACTS_BINARY_DIR "/home/nsjames/code/eos-system-contracts/build")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/contracts.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/contracts.hpp)
 

@@ -82,8 +82,14 @@ public:
       set_code( xyz_name, xyz_contracts::system_wasm());
       set_abi( xyz_name, xyz_contracts::system_abi().data() );
 
+      auto trace = base_tester::push_action(config::system_account_name, "setpriv"_n,
+        config::system_account_name,  mutable_variant_object()
+        ("account", xyz_name)
+        ("is_priv", 1)
+      );
+
       if( call_init ) {
-         base_tester::push_action(xyz_name, "init"_n, {config::system_account_name, xyz_name},
+         base_tester::push_action(xyz_name, "init"_n, xyz_name,
                                   mutable_variant_object()("maximum_supply", xyz("2100000000.0000")));
       }
 
@@ -1165,6 +1171,11 @@ public:
       return time_point_sec( control->head().block_time() ).sec_since_epoch();
    }
 
+   asset get_xyz_balance( const account_name& act ) {
+      vector<char> data = get_row_by_account( xyz_name, act, "accounts"_n, account_name(xyz_symbol().to_symbol_code().value) );
+      return data.empty() ? asset(0, xyz_symbol()) : token_abi_ser.binary_to_variant("account", data, abi_serializer::create_yield_function(abi_serializer_max_time))["balance"].as<asset>();
+   }
+
    asset get_balance( const account_name& act, symbol balance_symbol = symbol{CORE_SYM} ) {
       vector<char> data = get_row_by_account( "eosio.token"_n, act, "accounts"_n, account_name(balance_symbol.to_symbol_code().value) );
       return data.empty() ? asset(0, balance_symbol) : token_abi_ser.binary_to_variant("account", data, abi_serializer::create_yield_function(abi_serializer_max_time))["balance"].as<asset>();
@@ -1241,6 +1252,15 @@ public:
       base_tester::push_action( "eosio.token"_n, "setmaxsupply"_n, issuer, mutable_variant_object()
                                 ("issuer",       issuer )
                                 ("maximum_supply", maximum_supply )
+                                );
+   }
+
+   void transfer_xyz( const name& from, const name& to, const asset& amount ) {
+      base_tester::push_action( xyz_name, "transfer"_n, from, mutable_variant_object()
+                                ("from",    from)
+                                ("to",      to )
+                                ("quantity", amount)
+                                ("memo", "")
                                 );
    }
 
