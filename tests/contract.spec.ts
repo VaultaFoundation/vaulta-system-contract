@@ -101,6 +101,48 @@ describe('New token changes', () => {
         );
     });
 
+    it('Should be able to swap and withdraw to another account', async () => {
+        // Swapping EOS to XYZ
+        {
+            const eosBeforeSwapper = await eosToken.tables.accounts(nameToBigInt('swapper')).getTableRows()[0];
+            const xyzBeforeSwapper = await systemWrapper.tables.accounts(nameToBigInt('swapper')).getTableRows()[0];
+            const eosBeforeUser = await eosToken.tables.accounts(nameToBigInt('user')).getTableRows()[0];
+            const xyzBeforeUser = await systemWrapper.tables.accounts(nameToBigInt('user')).getTableRows()[0];
+
+            await systemWrapper.actions.swapto(['swapper', 'user', '1.0000 EOS', '']).send('swapper@active')
+
+            const eosAfterSwapper = await eosToken.tables.accounts(nameToBigInt('swapper')).getTableRows()[0];
+            const xyzAfterSwapper = await systemWrapper.tables.accounts(nameToBigInt('swapper')).getTableRows()[0];
+            const eosAfterUser = await eosToken.tables.accounts(nameToBigInt('user')).getTableRows()[0];
+            const xyzAfterUser = await systemWrapper.tables.accounts(nameToBigInt('user')).getTableRows()[0];
+
+            assert(parseFloat(eosBeforeSwapper.balance.split(' ')[0]) -1 == parseFloat(eosAfterSwapper.balance.split(' ')[0]), "Invalid eos balance");
+            assert(parseFloat(xyzBeforeSwapper.balance.split(' ')[0]) == parseFloat(xyzAfterSwapper.balance.split(' ')[0]), "Invalid xyz balance");
+            assert(parseFloat(eosBeforeUser.balance.split(' ')[0]) == parseFloat(eosAfterUser.balance.split(' ')[0]), "Invalid eos balance");
+            assert(parseFloat(xyzBeforeUser.balance.split(' ')[0]) +1 == parseFloat(xyzAfterUser.balance.split(' ')[0]), "Invalid xyz balance");
+        }
+
+        // Swapping XYZ to EOS
+        {
+            const eosBeforeSwapper = await eosToken.tables.accounts(nameToBigInt('swapper')).getTableRows()[0];
+            const xyzBeforeSwapper = await systemWrapper.tables.accounts(nameToBigInt('swapper')).getTableRows()[0];
+            const eosBeforeUser = await eosToken.tables.accounts(nameToBigInt('user')).getTableRows()[0];
+            const xyzBeforeUser = await systemWrapper.tables.accounts(nameToBigInt('user')).getTableRows()[0];
+
+            await systemWrapper.actions.swapto(['swapper', 'user', '1.0000 XYZ', '']).send('swapper@active')
+
+            const eosAfterSwapper = await eosToken.tables.accounts(nameToBigInt('swapper')).getTableRows()[0];
+            const xyzAfterSwapper = await systemWrapper.tables.accounts(nameToBigInt('swapper')).getTableRows()[0];
+            const eosAfterUser = await eosToken.tables.accounts(nameToBigInt('user')).getTableRows()[0];
+            const xyzAfterUser = await systemWrapper.tables.accounts(nameToBigInt('user')).getTableRows()[0];
+
+            assert(parseFloat(xyzBeforeSwapper.balance.split(' ')[0]) -1 == parseFloat(xyzAfterSwapper.balance.split(' ')[0]), "Invalid xyz balance");
+            assert(parseFloat(eosBeforeSwapper.balance.split(' ')[0]) == parseFloat(eosAfterSwapper.balance.split(' ')[0]), "Invalid eos balance");
+            assert(parseFloat(xyzBeforeUser.balance.split(' ')[0]) == parseFloat(xyzAfterUser.balance.split(' ')[0]), "Invalid xyz balance");
+            assert(parseFloat(eosBeforeUser.balance.split(' ')[0]) +1 == parseFloat(eosAfterUser.balance.split(' ')[0]), "Invalid eos balance");
+        }
+    });
+
     it('Should be able to automatically swap tokens and use system contracts', async () => {
         const oldXYZBalance = await systemWrapper.tables.accounts(nameToBigInt('user')).getTableRows()[0];
 
