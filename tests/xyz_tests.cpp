@@ -177,20 +177,33 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
     // Should be able to sellram
     {
         auto old_balance = get_xyz_balance(user);
+        auto old_balance_eos = get_balance(user);
         base_tester::push_action( xyz_name, "sellram"_n, user, mutable_variant_object()
             ("account",    user)
             ("bytes", 1024)
         );
 
-        // console log old balance
-        std::cout << "old_balance: " << old_balance << std::endl;
-        // console log new balance
-        std::cout << "new_balance: " << get_xyz_balance(user) << std::endl;
-
-
-
-//         BOOST_REQUIRE_EQUAL(get_xyz_balance(user) > old_balance, true);
+        BOOST_REQUIRE_EQUAL(get_balance(user), old_balance_eos);
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user) > old_balance, true);
     }
+
+    // should be able to stake to rex
+    {
+        auto old_balance = get_xyz_balance(user);
+        base_tester::push_action( xyz_name, "deposit"_n, user, mutable_variant_object()
+            ("owner",    user)
+            ("amount", xyz("1.0000"))
+        );
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance - xyz("1.0000"));
+
+        base_tester::push_action( xyz_name, "buyrex"_n, user, mutable_variant_object()
+            ("from",    user)
+            ("amount", xyz("1.0000"))
+        );
+    }
+
+
 
 } FC_LOG_AND_RETHROW()
 

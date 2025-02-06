@@ -285,7 +285,10 @@ class [[eosio::contract("system")]] system_contract : public contract {
             auto itr = _rammarket.find(RAMCORE.raw());
             check( from.symbol == itr->base.balance.symbol && to == itr->quote.balance.symbol, "invalid conversion direction" );
 
-            return asset( get_bancor_output( itr->base.balance.amount, itr->quote.balance.amount, from.amount ), to );
+            auto base_price = get_bancor_output( itr->base.balance.amount, itr->quote.balance.amount, from.amount );
+            auto fee = ( base_price + 199 ) / 200;
+
+            return asset(base_price + fee, to);
         }
 
         // Gets a given account's balance of EOS
@@ -307,7 +310,18 @@ class [[eosio::contract("system")]] system_contract : public contract {
         // of using the user experience forwarding actions in this contract.
         ACTION enforcebal( const name& account, const asset& expected_eos_balance ){
             asset eos_balance = get_eos_balance(account);
-            check(eos_balance == expected_eos_balance, "EOS balance mismatch");
+            check(eos_balance == expected_eos_balance, "EOS balance mismatch: " + eos_balance.to_string() + " != " + expected_eos_balance.to_string());
+        }
+
+        ACTION swapexcess( const name& account, const asset& eos_before ){
+            require_auth(get_self());
+            asset eos_after = get_eos_balance(account);
+            check(eos_after > eos_before, "No excess to swap");
+            asset excess = eos_after - eos_before;
+
+            if(excess.amount > 0){
+                swap_after_forwarding(account, excess);
+            }
         }
 
 
@@ -437,34 +451,31 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 std::make_tuple(account, bytes)
             ).send();
 
-            swap_after_forwarding(account, eos_quantity);
-
-            // The amount of EOS the user had before should not have changed.
             action(
-                permission_level{account, "active"_n},
+                permission_level{get_self(), "active"_n},
                 get_self(),
-                "enforcebal"_n,
+                "swapexcess"_n,
                 std::make_tuple(account, eos_before)
             ).send();
         }
 
-        ACTION deposit( const name& from, const asset& quantity ){
-            swap_before_forwarding(from, quantity);
+        ACTION deposit( const name& owner, const asset& amount ){
+            swap_before_forwarding(owner, amount);
             action(
-                permission_level{from, "active"_n},
+                permission_level{owner, "active"_n},
                 "eosio"_n,
                 "deposit"_n,
-                std::make_tuple(from, asset(quantity.amount, EOS))
+                std::make_tuple(owner, asset(amount.amount, EOS))
             ).send();
         }
 
-        ACTION buyrex( const name& from, const asset& quantity ){
+        ACTION buyrex( const name& from, const asset& amount ){
             // Do not need a swap here because the EOS is already deposited.
             action(
                 permission_level{from, "active"_n},
                 "eosio"_n,
                 "buyrex"_n,
-                std::make_tuple(from, asset(quantity.amount, EOS))
+                std::make_tuple(from, asset(amount.amount, EOS))
             ).send();
         }
 
