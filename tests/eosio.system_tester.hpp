@@ -87,6 +87,13 @@ public:
          return push_action(_contract_name, act, std::move(params), {from});
       }
 
+      action_result bidname(name bidder, name newname, const asset& bid) { // this action available only on xyz contract
+         auto act    = "bidname"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act,
+                                 mutable_variant_object()("bidder", bidder)("newname", newname)("bid", bid));
+         return push_action(_contract_name, act, std::move(params), {bidder});
+      }
+
       account_name         _contract_name;
       eosio_system_tester& _tester;
    };
