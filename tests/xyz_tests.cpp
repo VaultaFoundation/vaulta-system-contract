@@ -24,8 +24,10 @@ const account_name user3 = "user3"_n;
 
 BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
+
     const std::vector<account_name> accounts = { issuer, swapper, hacker, user, user2, user3 };
     create_accounts_with_resources( accounts );
+    produce_block();
 
     // Fill some accounts with EOS so they can swap and test things
     transfer(eos_name, swapper, eos("100.0000"));
@@ -197,12 +199,102 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
         BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance - xyz("1.0000"));
 
+        auto rex_fund = get_rex_fund(user);
+        BOOST_REQUIRE_EQUAL(rex_fund, eos("1.0000"));
+
         base_tester::push_action( xyz_name, "buyrex"_n, user, mutable_variant_object()
             ("from",    user)
             ("amount", xyz("1.0000"))
         );
+
+        auto rex_balance = get_rex_balance(user);
+        BOOST_REQUIRE_EQUAL(rex_balance, rex(10000'0000));
     }
 
+    // should be able to unstake from rex
+    {
+        base_tester::push_action( "eosio"_n, "mvtosavings"_n, user, mutable_variant_object()
+            ("owner",    user)
+            ("rex", rex(10000'0000))
+        );
+        base_tester::push_action( xyz_name, "mvfrsavings"_n, user, mutable_variant_object()
+            ("owner",    user)
+            ("rex", rex(10000'0000))
+        );
+
+        produce_block();
+        produce_block( fc::days(30) );
+
+        // sell rex
+        base_tester::push_action( xyz_name, "sellrex"_n, user, mutable_variant_object()
+            ("from",    user)
+            ("rex", rex(10000'0000))
+        );
+    }
+
+    // should be able to withdraw
+    {
+        auto old_balance = get_xyz_balance(user);
+        base_tester::push_action( xyz_name, "withdraw"_n, user, mutable_variant_object()
+            ("owner",    user)
+            ("amount", xyz("1.0000"))
+        );
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance + xyz("1.0000"));
+    }
+
+
+    transfer(eos_name, user, eos("100000.0000"));
+    transfer(user, xyz_name, eos("100000.0000"), user);
+    active_and_vote_producers();
+
+    // should be able to powerup and get overages back in XYZ
+    // TODO: Powerup isn't initialized
+//     {
+//         auto old_balance = get_xyz_balance(user);
+//         base_tester::push_action( xyz_name, "powerup"_n, user, mutable_variant_object()
+//             ("payer",    user)
+//             ("receiver", user)
+//             ("days", 30)
+//             ("net_frac", 1)
+//             ("cpu_frac", 1)
+//             ("max_payment", xyz("1.0000"))
+//         );
+//
+//         BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance - xyz("1.0000"));
+//     }
+
+    // should be able to delegate and undelegate bw
+    {
+        auto old_balance = get_xyz_balance(user) - xyz("100000.0000");
+        std::cout << "old_balance: " << old_balance << std::endl;
+        base_tester::push_action( xyz_name, "delegatebw"_n, user, mutable_variant_object()
+            ("from",    user)
+            ("receiver", user)
+            ("stake_net_quantity", xyz("1.0000"))
+            ("stake_cpu_quantity", xyz("100000.0000"))
+            ("transfer", false)
+        );
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance - xyz("1.0000"));
+
+        base_tester::push_action( xyz_name, "undelegatebw"_n, user, mutable_variant_object()
+            ("from",    user)
+            ("receiver", user)
+            ("unstake_net_quantity", xyz("0.0000"))
+            ("unstake_cpu_quantity", xyz("1.0000"))
+        );
+
+        produce_block();
+        produce_block( fc::days(10) );
+
+        base_tester::push_action( xyz_name, "refund"_n, user, mutable_variant_object()
+            ("owner",    user)
+        );
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance);
+
+    }
 
 
 } FC_LOG_AND_RETHROW()

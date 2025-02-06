@@ -24,6 +24,9 @@ public:
 
    static asset eos(const char* amount) { return core_sym::from_string(amount); }
    static asset xyz(const char* amount) { return xyz_core_sym::from_string(amount); }
+   static asset rex(uint64_t amount) {
+        return asset(amount, symbol(SY(4, REX)));
+   }
 
    static symbol xyz_symbol() { return symbol{XYZ_SYM}; }
    static symbol eos_symbol() { return symbol{CORE_SYM}; }
