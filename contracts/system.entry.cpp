@@ -279,18 +279,6 @@ class [[eosio::contract("system")]] system_contract : public contract {
             ).send();
         }
 
-        // Calculate how much EOS you get for a given amount of RAM
-        asset ram_to_tokens( const asset& from, const symbol& to ){
-            rammarket _rammarket("eosio"_n, "eosio"_n.value);
-            auto itr = _rammarket.find(RAMCORE.raw());
-            check( from.symbol == itr->base.balance.symbol && to == itr->quote.balance.symbol, "invalid conversion direction" );
-
-            auto base_price = get_bancor_output( itr->base.balance.amount, itr->quote.balance.amount, from.amount );
-            auto fee = ( base_price + 199 ) / 200;
-
-            return asset(base_price + fee, to);
-        }
-
         // Gets a given account's balance of EOS
         asset get_eos_balance(const name& account){
             accounts acnts( "eosio.token"_n, account.value );
@@ -444,7 +432,6 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION sellram( const name& account, const int64_t& bytes ){
-            asset eos_quantity = ram_to_tokens(asset(bytes, RAM), EOS);
             asset eos_before = get_eos_balance(account);
 
             action(
