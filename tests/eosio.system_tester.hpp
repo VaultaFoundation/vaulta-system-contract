@@ -8,6 +8,8 @@
 
 #include <fc/variant_object.hpp>
 #include <fstream>
+#include <ranges>
+
 
 using namespace eosio::chain;
 using namespace eosio::testing;
@@ -43,16 +45,46 @@ public:
          return static_cast<base_tester&>(_tester).push_action(std::forward<Args>(args)...);
       }
 
-      action_result push_action(account_name signer, action_name act, bytes params) {
-         action action({}, _contract_name, act, std::move(params));
-         return push_action_to_base(std::move(action), signer.to_uint64_t());
+      action_result push_action(account_name signer, action_name act, bytes params, vector<permission_level> auths) {
+         signed_transaction trx;
+         trx.actions.emplace_back(action(auths, _contract_name, act, std::move(params)));
+         _tester.set_transaction_headers(trx);
+
+         for (auto auth : auths)
+            trx.sign(get_private_key(auth.actor, auth.permission.to_string()), _tester.control->get_chain_id());
+
+         try {
+            _tester.push_transaction(trx);
+         } catch (const fc::exception& ex) {
+            edump((ex.to_detail_string()));
+            return error(ex.top_message()); // top_message() is assumed by many tests; otherwise they fail
+         }
+         _tester.produce_block();
+         BOOST_REQUIRE_EQUAL(true, _tester.chain_has_transaction(trx.id()));
+         return success();
       }
 
-      action_result transfer(name from, name to, const asset& amount) {
+      action_result push_action(account_name signer, action_name act, bytes params, vector<name> actors) {
+         vector<permission_level> auths;
+         for (auto n : actors)
+            auths.emplace_back(n, config::active_name);
+         return push_action(signer, act, std::move(params), std::move(auths));
+      }
+
+      // supported actions
+      // -----------------
+      action_result transfer(name from, name to, const asset& amount) {       // both xyz and system contracts
          auto act    = "transfer"_n;
          auto params = serialize(_tester.token_abi_ser, act,
                                  mutable_variant_object()("from", from)("to", to)("quantity", amount)("memo", ""));
-         return push_action(from, act, std::move(params));
+         return push_action(from, act, std::move(params), {from});
+      }
+
+      action_result swapto(name from, name to, const asset& amount) {         // this action available only on xyz contract
+         auto act    = "swapto"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act,
+                                 mutable_variant_object()("from", from)("to", to)("quantity", amount)("memo", ""));
+         return push_action(_contract_name, act, std::move(params), {from});
       }
 
       account_name         _contract_name;
@@ -67,6 +99,21 @@ public:
       if (data.empty())
          return asset(0, xyz);
       return token_abi_ser.binary_to_variant("account", data, abi_serializer_max_time)["balance"].as<asset>();
+   }
+
+   bool check_balances(account_name act, const vector<asset>& assets) {
+      for (const auto& a : assets) {
+         if (a.get_symbol() == xyz_symbol()) {
+            if (get_xyz_balance(act) != a)
+               return false;
+         } else if (a.get_symbol() == eos_symbol()) {
+            if (get_eos_balance(act) != a)
+               return false;
+         } else {
+            return false;
+         }
+      }
+      return true;
    }
 
    contract eosio_token;
@@ -114,19 +161,8 @@ public:
       set_code( config::system_account_name, eos_contracts::system_wasm() );
       set_abi( config::system_account_name, eos_contracts::system_abi().data() );
       if( call_init ) {
-         base_tester::push_action(config::system_account_name, "init"_n,
-                                               config::system_account_name,  mutable_variant_object()
-                                               ("version", 0)
-                                               ("core", CORE_SYM_STR)
-         );
-      }
-
-      
-      set_code( xyz_name, xyz_contracts::system_wasm());
-      set_abi( xyz_name, xyz_contracts::system_abi().data() );
-      if( call_init ) {
-         base_tester::push_action(xyz_name, "init"_n, {config::system_account_name, xyz_name},
-                                  mutable_variant_object()("maximum_supply", xyz("2100000000.0000")));
+         base_tester::push_action(config::system_account_name, "init"_n, config::system_account_name,
+                                  mutable_variant_object()("version", 0)("core", CORE_SYM_STR));
       }
 
       {
@@ -134,6 +170,27 @@ public:
          abi_def abi;
          BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
          abi_ser.set_abi(abi, abi_serializer::create_yield_function(abi_serializer_max_time));
+      }
+
+      set_code( xyz_name, xyz_contracts::system_wasm());
+      set_abi( xyz_name, xyz_contracts::system_abi().data() );
+
+      auto trace = base_tester::push_action(config::system_account_name, "setpriv"_n,
+        config::system_account_name,  mutable_variant_object()
+        ("account", xyz_name)
+        ("is_priv", 1)
+      );
+
+      if( call_init ) {
+         base_tester::push_action(xyz_name, "init"_n, {config::system_account_name, xyz_name},
+                                  mutable_variant_object()("maximum_supply", xyz("2100000000.0000")));
+      }
+
+      {
+         const auto& accnt = control->db().get<account_object,by_name>(xyz_name);
+         abi_def abi;
+         BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
+         xyz_abi_ser.set_abi(abi, abi_serializer::create_yield_function(abi_serializer_max_time));
       }
    }
 
@@ -1574,9 +1631,10 @@ public:
       return data.empty() ? fc::variant() : bpay_abi_ser.binary_to_variant( "rewards_row", data, abi_serializer::create_yield_function(abi_serializer_max_time) );
    }
 
-   abi_serializer abi_ser;
-   abi_serializer token_abi_ser;
+   abi_serializer abi_ser;        // eos system contract
+   abi_serializer token_abi_ser;  // eos token contract
    abi_serializer bpay_abi_ser;
+   abi_serializer xyz_abi_ser;    // xyz wrap contract
 };
 
 inline fc::mutable_variant_object voter( account_name acct ) {
