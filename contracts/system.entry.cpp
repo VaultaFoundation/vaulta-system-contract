@@ -408,7 +408,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
             ).send();
         }
 
-        ACTION ramburn( const name& owner, const uint32_t& bytes, const std::string& memo ){
+        ACTION ramburn( const name& owner, const int64_t& bytes, const std::string& memo ){
             action(
                 permission_level{owner, "active"_n},
                 "eosio"_n,
@@ -417,7 +417,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
             ).send();
         }
 
-        ACTION ramtransfer( const name& from, const name& to, const uint32_t& bytes, const std::string& memo ){
+        ACTION ramtransfer( const name& from, const name& to, const int64_t& bytes, const std::string& memo ){
             action(
                 permission_level{from, "active"_n},
                 "eosio"_n,
@@ -426,7 +426,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
             ).send();
         }
 
-        ACTION sellram( const name& account, const uint32_t& bytes ){
+        ACTION sellram( const name& account, const int64_t& bytes ){
             asset eos_quantity = ram_to_tokens(asset(bytes, RAM), EOS);
             asset eos_before = get_eos_balance(account);
 

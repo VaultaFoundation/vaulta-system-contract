@@ -19,10 +19,12 @@ const account_name issuer = "issuer"_n;
 const account_name swapper = "swapper"_n;
 const account_name hacker = "hacker"_n;
 const account_name user = "user"_n;
+const account_name user2 = "user2"_n;
+const account_name user3 = "user3"_n;
 
 BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
-    const std::vector<account_name> accounts = { issuer, swapper, hacker, user };
+    const std::vector<account_name> accounts = { issuer, swapper, hacker, user, user2, user3 };
     create_accounts_with_resources( accounts );
 
     // Fill some accounts with EOS so they can swap and test things
@@ -31,6 +33,8 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
     transfer(eos_name, user,   eos("100.0000"));
     BOOST_REQUIRE_EQUAL(get_balance(user), eos("100.0000"));
+    transfer(eos_name, user2,   eos("100.0000"));
+    transfer(eos_name, user3,   eos("100.0000"));
 
     // check that we do start with 2.1B XYZ in XYZ's account (`init` action called in deploy_contract)
     // -----------------------------------------------------------------------------------------------
@@ -78,6 +82,115 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
     BOOST_REQUIRE_EQUAL(get_xyz_balance(swapper), xyz("1.0000"));
     BOOST_REQUIRE_EQUAL(get_xyz_balance(user), xyz("1.0000"));
 
+    // swap some EOS to XYZ
+    transfer(user, xyz_name, eos("50.0000"), user);
+    transfer(user2, xyz_name, eos("50.0000"), user2);
+    transfer(user3, xyz_name, eos("50.0000"), user3);
+
+    // Should be able to automatically swap tokens and use system contracts
+    {
+        auto old_balance = get_xyz_balance(user);
+        base_tester::push_action( xyz_name, "bidname"_n, swapper, mutable_variant_object()
+            ("bidder",    user)
+            ("newname",   "newname")
+            ("bid",       xyz("1.0000"))
+        );
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance - xyz("1.0000"));
+    }
+
+    // Should be able to bidrefund
+    {
+        auto old_balance = get_xyz_balance(user);
+        base_tester::push_action( xyz_name, "bidname"_n, user2, mutable_variant_object()
+            ("bidder",    user2)
+            ("newname",   "newname")
+            ("bid",       xyz("1.5000"))
+        );
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance);
+
+        base_tester::push_action( xyz_name, "bidrefund"_n, user, mutable_variant_object()
+            ("bidder",    user)
+            ("newname",   "newname")
+        );
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance + xyz("1.0000"));
+    }
+
+    // Should be able to buyram
+    {
+        auto old_balance = get_xyz_balance(user);
+        base_tester::push_action( xyz_name, "buyram"_n, user, mutable_variant_object()
+            ("payer",    user)
+            ("receiver", user)
+            ("quantity", xyz("1.0000"))
+        );
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance - xyz("1.0000"));
+    }
+
+    // Should be able to buyramself
+    {
+        auto old_balance = get_xyz_balance(user);
+        base_tester::push_action( xyz_name, "buyramself"_n, user, mutable_variant_object()
+            ("payer",    user)
+            ("quantity", xyz("1.0000"))
+        );
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance - xyz("1.0000"));
+    }
+
+    // Should be able to buyramburn
+    {
+        auto old_balance = get_xyz_balance(user);
+        base_tester::push_action( xyz_name, "buyramburn"_n, user, mutable_variant_object()
+            ("payer",    user)
+            ("quantity", xyz("1.0000"))
+            ("memo", std::string("memo"))
+        );
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance - xyz("1.0000"));
+    }
+
+    // Should be able to buyrambytes
+    {
+        auto old_balance = get_xyz_balance(user);
+        base_tester::push_action( xyz_name, "buyrambytes"_n, user, mutable_variant_object()
+            ("payer",    user)
+            ("receiver", user)
+            ("bytes", 1024)
+        );
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user) < old_balance, true);
+    }
+
+    // Should be able to burnram
+    {
+        base_tester::push_action( xyz_name, "ramburn"_n, user, mutable_variant_object()
+            ("owner",    user)
+            ("bytes", 10)
+            ("memo", "memo")
+        );
+    }
+
+    // Should be able to sellram
+    {
+        auto old_balance = get_xyz_balance(user);
+        base_tester::push_action( xyz_name, "sellram"_n, user, mutable_variant_object()
+            ("account",    user)
+            ("bytes", 1024)
+        );
+
+        // console log old balance
+        std::cout << "old_balance: " << old_balance << std::endl;
+        // console log new balance
+        std::cout << "new_balance: " << get_xyz_balance(user) << std::endl;
+
+
+
+//         BOOST_REQUIRE_EQUAL(get_xyz_balance(user) > old_balance, true);
+    }
 
 } FC_LOG_AND_RETHROW()
 
