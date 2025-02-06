@@ -15,6 +15,9 @@ using namespace eosio_system;
 
 BOOST_AUTO_TEST_SUITE(xyz_tests);
 
+// ----------------------------
+// test: `transfer`, `swapto`
+// ----------------------------
 BOOST_FIXTURE_TEST_CASE(transfer_and_swapto, eosio_system_tester) try {
    const std::vector<account_name> accounts = { "alice"_n, "bob"_n };
    create_accounts_with_resources( accounts );
@@ -69,8 +72,10 @@ BOOST_FIXTURE_TEST_CASE(transfer_and_swapto, eosio_system_tester) try {
                        error("assertion failure with message: overdrawn balance"));
 } FC_LOG_AND_RETHROW()
 
-
-BOOST_FIXTURE_TEST_CASE(automatic_swap_and_use, eosio_system_tester) try {
+// ----------------------------
+// test: `bidname`, `bidrefund`
+// ----------------------------
+BOOST_FIXTURE_TEST_CASE(bidname, eosio_system_tester) try {
    const std::vector<account_name> accounts = { "alice"_n, "bob"_n };
    create_accounts_with_resources( accounts );
    const account_name alice = accounts[0];
@@ -83,24 +88,35 @@ BOOST_FIXTURE_TEST_CASE(automatic_swap_and_use, eosio_system_tester) try {
 
    // check that we do start with 2.1B XYZ in XYZ's account (`init` action called in deploy_contract)
    // -----------------------------------------------------------------------------------------------
-   BOOST_REQUIRE_EQUAL(get_xyz_balance(xyz_name), xyz("2100000000.0000"));      // initial supply
+   BOOST_REQUIRE_EQUAL(get_xyz_balance(xyz_name), xyz("2100000000.0000"));                // initial supply
 
-   // bid on a name using xyz contract. Must have XYZ balance. Must use XYZ.
+   // Bid on a name using xyz contract. Convert XYZ to EOS and forward to eos
+   // system contract. Must have XYZ balance. Must use XYZ.
    // ----------------------------------------------------------------------
    BOOST_REQUIRE(check_balances(alice, { eos("100.0000"), xyz("0.0000") }));
    BOOST_REQUIRE_EQUAL(eosio_xyz.bidname(alice, alice, eos("1.0000")),
-                       error("assertion failure with message: Wrong token used"));
+                       error("assertion failure with message: Wrong token used"));        // Must use XYZ.
    BOOST_REQUIRE_EQUAL(eosio_xyz.bidname(alice, alice, xyz("1.0000")), 
-                       error("assertion failure with message: no balance object found"));
+                       error("assertion failure with message: no balance object found")); // Must have XYZ balance
    
    BOOST_REQUIRE_EQUAL(eosio_token.transfer(alice, xyz_name, eos("50.0000")), success()); // swap 50 EOS to XYZ
    BOOST_REQUIRE(check_balances(alice, { eos("50.0000"), xyz("50.0000") }));
 
    BOOST_REQUIRE_EQUAL(eosio_xyz.bidname(alice, alice, xyz("1.0000")), 
-                       error("assertion failure with message: account already exists"));  // need to use new name
+                       error("assertion failure with message: account already exists"));  // Must be new name
 
    BOOST_REQUIRE_EQUAL(eosio_xyz.bidname(alice, "al"_n, xyz("1.0000")), success());
    BOOST_REQUIRE(check_balances(alice, { eos("50.0000"), xyz("49.0000") }));
+
+   // Refund bid on a name using xyz contract. Forward refund to eos system
+   // contract and swap back refund to XYZ. 
+   // ----------------------------------------------------------------------
+   BOOST_REQUIRE_EQUAL(eosio_xyz.bidrefund(alice, "al"_n),                               // In order to get a refund,
+                       error("assertion failure with message: No refund available"));    // someone else must bid higher
+   BOOST_REQUIRE_EQUAL(eosio_token.transfer(bob, xyz_name, eos("50.0000")), success());  // make sure bob has XYZ
+   BOOST_REQUIRE_EQUAL(eosio_xyz.bidname(bob, "al"_n, xyz("2.0000")), success());        // outbid Alice for name `al`
+   BOOST_REQUIRE_EQUAL(eosio_xyz.bidrefund(alice, "al"_n), success());                   // now Alice can get a refund
+   BOOST_REQUIRE(check_balances(alice, { eos("50.0000"), xyz("50.0000") }));
    
 } FC_LOG_AND_RETHROW()
 
