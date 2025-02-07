@@ -30,6 +30,9 @@ public:
    static symbol xyz_symbol() { return symbol{XYZ_SYM}; }
    static symbol eos_symbol() { return symbol{CORE_SYM}; }
 
+   // -----------------
+   // contract
+   // -----------------
    struct contract {
       contract(account_name name, eosio_system_tester& tester)
          : _contract_name(name)
@@ -57,7 +60,10 @@ public:
             _tester.push_transaction(trx);
          } catch (const fc::exception& ex) {
             edump((ex.to_detail_string()));
-            return error(ex.top_message()); // top_message() is assumed by many tests; otherwise they fail
+            auto msg = ex.top_message(); // top_message() is assumed by many tests; otherwise they fail
+            if (msg.starts_with("assertion failure with message: "))
+               msg = msg.substr(strlen("assertion failure with message: "));
+            return error(msg); 
          }
          _tester.produce_block();
          BOOST_REQUIRE_EQUAL(true, _tester.chain_has_transaction(trx.id()));
@@ -71,51 +77,98 @@ public:
          return push_action(signer, act, std::move(params), std::move(auths));
       }
 
+      // -----------------
       // supported actions
       // -----------------
       action_result transfer(name from, name to, const asset& amount) {       // both xyz and system contracts
          auto act    = "transfer"_n;
-         auto params = serialize(_tester.token_abi_ser, act,
-                                 mutable_variant_object()("from", from)("to", to)("quantity", amount)("memo", ""));
+         auto params =
+            serialize(_tester.token_abi_ser, act, mvo()("from", from)("to", to)("quantity", amount)("memo", ""));
          return push_action(from, act, std::move(params), {from});
       }
 
       action_result swapto(name from, name to, const asset& amount) {         // this action available only on xyz contract
          auto act    = "swapto"_n;
-         auto params = serialize(_tester.xyz_abi_ser, act,
-                                 mutable_variant_object()("from", from)("to", to)("quantity", amount)("memo", ""));
+         auto params =
+            serialize(_tester.xyz_abi_ser, act, mvo()("from", from)("to", to)("quantity", amount)("memo", ""));
          return push_action(_contract_name, act, std::move(params), {from});
       }
 
       action_result bidname(name bidder, name newname, const asset& bid) {
          auto act    = "bidname"_n;
-         auto params = serialize(_tester.xyz_abi_ser, act,
-                                 mutable_variant_object()("bidder", bidder)("newname", newname)("bid", bid));
+         auto params = serialize(_tester.xyz_abi_ser, act, mvo()("bidder", bidder)("newname", newname)("bid", bid));
          return push_action(_contract_name, act, std::move(params), {bidder});
       }
 
       action_result bidrefund(name bidder, name newname) {
          auto act    = "bidrefund"_n;
-         auto params = serialize(_tester.abi_ser, act,
-                                 mutable_variant_object()("bidder", bidder)("newname", newname));
+         auto params = serialize(_tester.xyz_abi_ser, act, mvo()("bidder", bidder)("newname", newname));
          return push_action(_contract_name, act, std::move(params), {bidder});
       }
+
+      action_result buyram(name payer, name receiver, const asset& quant) {
+         auto act    = "buyram"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act, mvo()("payer", payer)("receiver", receiver)("quant", quant));
+         return push_action(_contract_name, act, std::move(params), {payer});
+      }
+
+      action_result buyramburn(name payer, const asset& quantity) {
+         auto act    = "buyramburn"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act, mvo()("payer", payer)("quantity", quantity)("memo", ""));
+         return push_action(_contract_name, act, std::move(params), {payer});
+      }
+
+      action_result buyrambytes(name payer, name receiver, uint32_t bytes) {
+         auto act    = "buyrambytes"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act, mvo()("payer", payer)("receiver", receiver)("bytes", bytes));
+         return push_action(_contract_name, act, std::move(params), {payer});
+      }
+
+      action_result buyramself(name payer, const asset& quant) {
+         auto act    = "buyramself"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act, mvo()("payer", payer)("quant", quant));
+         return push_action(_contract_name, act, std::move(params), {payer});
+      }
+      
+      action_result ramburn(name owner, uint64_t bytes) {
+         auto act    = "ramburn"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act, mvo()("owner", owner)("bytes", bytes)("memo", ""));
+         return push_action(_contract_name, act, std::move(params), {owner});
+      }
+
+      action_result ramtransfer(name from, name to, uint64_t bytes) {
+         auto act    = "ramtransfer"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act, mvo()("from", from)("to", to)("bytes", bytes)("memo", ""));
+         return push_action(_contract_name, act, std::move(params), {from});
+      }
+
+      action_result sellram(name account, uint64_t bytes) {
+         auto act    = "sellram"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act, mvo()("account", account)("bytes", bytes));
+         return push_action(_contract_name, act, std::move(params), {account});
+      }
+
+
 
       account_name         _contract_name;
       eosio_system_tester& _tester;
    };
 
-   asset get_eos_balance(account_name act) { return get_balance(act, eos_symbol()); }
-
-   asset get_xyz_balance(account_name act) {
-      symbol xyz = xyz_symbol();
-      vector<char> data = get_row_by_account(xyz_name, act, "accounts"_n, account_name(xyz.to_symbol_code().value) );
+   // --------------------
+   // check token balances
+   // --------------------
+   asset get_balance(name code, account_name act, symbol token) const {
+      vector<char> data = get_row_by_account(code, act, "accounts"_n, account_name(token.to_symbol_code().value) );
       if (data.empty())
-         return asset(0, xyz);
+         return asset(0, token);
       return token_abi_ser.binary_to_variant("account", data, abi_serializer_max_time)["balance"].as<asset>();
    }
 
-   bool check_balances(account_name act, const vector<asset>& assets) {
+   asset get_eos_balance(account_name act) const { return get_balance("eosio.token"_n, act, eos_symbol()); }
+
+   asset get_xyz_balance(account_name act) const { return get_balance(xyz_name, act, xyz_symbol()); }
+
+   bool check_balances(account_name act, const vector<asset>& assets) const {
       for (const auto& a : assets) {
          if (a.get_symbol() == xyz_symbol()) {
             if (get_xyz_balance(act) != a)
@@ -129,6 +182,18 @@ public:
       }
       return true;
    }
+
+   // -----------------
+   // check ram balance
+   // -----------------
+   fc::variant get_total_stake(account_name act) const {
+      vector<char> data = get_row_by_account(eos_name, act, "userres"_n, act);
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant("user_resources", data, abi_serializer_max_time);
+   }
+
+   uint64_t get_ram_bytes(account_name act) const { return (uint64_t)get_total_stake(act)["ram_bytes"].as_int64(); }
+
+   
 
    contract eosio_token;
    contract eosio_xyz;
@@ -1292,10 +1357,6 @@ public:
       return get_balance( account_name(act), balance_symbol );
    }
 
-   fc::variant get_total_stake( const account_name& act ) {
-      vector<char> data = get_row_by_account( config::system_account_name, act, "userres"_n, act );
-      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "user_resources", data, abi_serializer::create_yield_function(abi_serializer_max_time) );
-   }
    fc::variant get_total_stake(  std::string_view act ) {
       return get_total_stake( account_name(act) );
    }
