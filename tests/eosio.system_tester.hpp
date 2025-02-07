@@ -191,7 +191,7 @@ public:
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant("user_resources", data, abi_serializer_max_time);
    }
 
-   uint64_t get_ram_bytes(account_name act) const { return (uint64_t)get_total_stake(act)["ram_bytes"].as_int64(); }
+   int64_t get_ram_bytes(account_name act) const { return get_total_stake(act)["ram_bytes"].as_int64(); }
 
    
 
