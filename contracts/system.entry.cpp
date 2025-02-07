@@ -301,13 +301,12 @@ class [[eosio::contract("system")]] system_contract : public contract {
             check(eos_balance == expected_eos_balance, "EOS balance mismatch: " + eos_balance.to_string() + " != " + expected_eos_balance.to_string());
         }
 
+        // Swaps any excess EOS back to XYZ after an action
         ACTION swapexcess( const name& account, const asset& eos_before ){
             require_auth(get_self());
             asset eos_after = get_eos_balance(account);
-            check(eos_after > eos_before, "No excess to swap");
-            asset excess = eos_after - eos_before;
-
-            if(excess.amount > 0){
+            if(eos_after > eos_before){
+                asset excess = eos_after - eos_before;
                 swap_after_forwarding(account, excess);
             }
         }
@@ -351,13 +350,13 @@ class [[eosio::contract("system")]] system_contract : public contract {
             ).send();
         }
 
-        ACTION buyram( const name& payer, const name& receiver, const asset& quantity ){
-            swap_before_forwarding(payer, quantity);
+        ACTION buyram( const name& payer, const name& receiver, const asset& quant ){
+            swap_before_forwarding(payer, quant);
             action(
                 permission_level{payer, "active"_n},
                 "eosio"_n,
                 "buyram"_n,
-                std::make_tuple(payer, receiver, asset(quantity.amount, EOS))
+                std::make_tuple(payer, receiver, asset(quant.amount, EOS))
             ).send();
         }
 
@@ -403,13 +402,13 @@ class [[eosio::contract("system")]] system_contract : public contract {
             ).send();
         }
 
-        ACTION buyramself( const name& payer, const asset& quantity ){
-            swap_before_forwarding(payer, quantity);
+        ACTION buyramself( const name& payer, const asset& quant ){
+            swap_before_forwarding(payer, quant);
             action(
                 permission_level{payer, "active"_n},
                 "eosio"_n,
                 "buyramself"_n,
-                std::make_tuple(payer, asset(quantity.amount, EOS))
+                std::make_tuple(payer, asset(quant.amount, EOS))
             ).send();
         }
 
