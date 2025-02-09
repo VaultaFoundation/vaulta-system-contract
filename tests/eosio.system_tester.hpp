@@ -151,8 +151,6 @@ public:
          return push_action(_contract_name, act, std::move(params), {account});
       }
 
-
-
       account_name         _contract_name;
       eosio_system_tester& _tester;
    };
@@ -252,18 +250,21 @@ public:
       // -------- eosio contract ------------------------------------------------------------------
       set_code_and_abi(config::system_account_name, eos_contracts::system_wasm(), eos_contracts::system_abi().data());
       create_serializer(config::system_account_name, abi_ser);
-      base_tester::push_action(config::system_account_name, "init"_n,
-                               config::system_account_name, // call `init` on system contract
+
+      base_tester::push_action(config::system_account_name, "init"_n,  // call `init` on system contract
+                               config::system_account_name,
                                mutable_variant_object()("version", 0)("core", CORE_SYM_STR));
 
       // -------- xyz contract --------------------------------------------------------------------
       set_code_and_abi(xyz_name, xyz_contracts::system_wasm(), xyz_contracts::system_abi().data());
       create_serializer(xyz_name, xyz_abi_ser);
-      base_tester::push_action(xyz_name, "init"_n,
-                               {config::system_account_name, xyz_name}, // call `init` on xyz contract
+
+      base_tester::push_action(xyz_name, "init"_n,                      // call `init` on xyz contract
+                               {config::system_account_name, xyz_name},
                                mutable_variant_object()("maximum_supply", xyz("2100000000.0000")));
-      base_tester::push_action(config::system_account_name, "setpriv"_n,
-                               config::system_account_name, // provide `priv` permission
+
+      base_tester::push_action(config::system_account_name, "setpriv"_n, // provide `priv` permission
+                               config::system_account_name,
                                mutable_variant_object()("account", xyz_name)("is_priv", 1));
    }
 
@@ -584,8 +585,7 @@ public:
       action act;
       act.account = config::system_account_name;
       act.name    = name;
-      act.data    = abi_ser.variant_to_binary(action_type_name, data,
-                                              abi_serializer::create_yield_function(abi_serializer_max_time));
+      act.data    = abi_ser.variant_to_binary(action_type_name, data, abi_serializer_max_time);
 
       return base_tester::push_action(std::move(act), signer.to_uint64_t());
    }
