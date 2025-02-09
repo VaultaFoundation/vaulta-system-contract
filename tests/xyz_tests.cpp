@@ -207,7 +207,6 @@ BOOST_FIXTURE_TEST_CASE(ram, eosio_system_tester) try {
    BOOST_REQUIRE_EQUAL(get_ram_bytes(bob), bob_ram_before_transfer + ram_bought);
    BOOST_REQUIRE(check_balances(alice, { eos("50.0000"), xyz_after_buyrambytes }));
 
-#if 1
    // sellram
    // -------
    auto bob_ram_before_sell = get_ram_bytes(bob);
@@ -216,7 +215,6 @@ BOOST_FIXTURE_TEST_CASE(ram, eosio_system_tester) try {
    BOOST_REQUIRE_EQUAL(get_ram_bytes(bob), bob_ram_before_sell - ram_bought);
    BOOST_REQUIRE_EQUAL(get_eos_balance(bob),  bob_eos_before_sell);  // no change, proceeds swapped for XYZ
    BOOST_REQUIRE_GT(get_xyz_balance(bob), bob_xyz_before_sell);      // proceeds of sellram 
-#endif
 } FC_LOG_AND_RETHROW()
 
 
