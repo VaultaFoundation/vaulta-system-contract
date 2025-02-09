@@ -133,19 +133,19 @@ public:
          return push_action(_contract_name, act, std::move(params), {payer});
       }
 
-      action_result ramburn(name owner, uint64_t bytes) {
+      action_result ramburn(name owner, int64_t bytes) {
          auto act    = "ramburn"_n;
          auto params = serialize(_tester.xyz_abi_ser, act, mvo()("owner", owner)("bytes", bytes)("memo", ""));
          return push_action(_contract_name, act, std::move(params), {owner});
       }
 
-      action_result ramtransfer(name from, name to, uint64_t bytes) {
+      action_result ramtransfer(name from, name to, int64_t bytes) {
          auto act    = "ramtransfer"_n;
          auto params = serialize(_tester.xyz_abi_ser, act, mvo()("from", from)("to", to)("bytes", bytes)("memo", ""));
          return push_action(_contract_name, act, std::move(params), {from});
       }
 
-      action_result sellram(name account, uint64_t bytes) {
+      action_result sellram(name account, int64_t bytes) {
          auto act    = "sellram"_n;
          auto params = serialize(_tester.xyz_abi_ser, act, mvo()("account", account)("bytes", bytes));
          return push_action(_contract_name, act, std::move(params), {account});

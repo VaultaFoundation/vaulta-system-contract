@@ -112,7 +112,7 @@ BOOST_FIXTURE_TEST_CASE(bidname, eosio_system_tester) try {
    // contract and swap back refund to XYZ. 
    // ----------------------------------------------------------------------
    BOOST_REQUIRE_EQUAL(eosio_xyz.bidrefund(alice, "al"_n),                               // In order to get a refund,
-                       error("refund not found"));                                       // someone else must bid higher
+                       error("No refund available"));                                    // someone else must bid higher
    BOOST_REQUIRE_EQUAL(eosio_token.transfer(bob, xyz_name, eos("50.0000")), success());  // make sure bob has XYZ
    BOOST_REQUIRE_EQUAL(eosio_xyz.bidname(bob, "al"_n, xyz("2.0000")), success());        // outbid Alice for name `al`
    BOOST_REQUIRE_EQUAL(eosio_xyz.bidrefund(alice, "al"_n), success());                   // now Alice can get a refund
@@ -207,6 +207,7 @@ BOOST_FIXTURE_TEST_CASE(ram, eosio_system_tester) try {
    BOOST_REQUIRE_EQUAL(get_ram_bytes(bob), bob_ram_before_transfer + ram_bought);
    BOOST_REQUIRE(check_balances(alice, { eos("50.0000"), xyz_after_buyrambytes }));
 
+#if 1
    // sellram
    // -------
    auto bob_ram_before_sell = get_ram_bytes(bob);
@@ -215,7 +216,7 @@ BOOST_FIXTURE_TEST_CASE(ram, eosio_system_tester) try {
    BOOST_REQUIRE_EQUAL(get_ram_bytes(bob), bob_ram_before_sell - ram_bought);
    BOOST_REQUIRE_EQUAL(get_eos_balance(bob),  bob_eos_before_sell);  // no change, proceeds swapped for XYZ
    BOOST_REQUIRE_GT(get_xyz_balance(bob), bob_xyz_before_sell);      // proceeds of sellram 
-
+#endif
 } FC_LOG_AND_RETHROW()
 
 
