@@ -126,7 +126,7 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
         base_tester::push_action( xyz_name, "buyram"_n, user, mutable_variant_object()
             ("payer",    user)
             ("receiver", user)
-            ("quantity", xyz("1.0000"))
+            ("quant", xyz("1.0000"))
         );
 
         BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance - xyz("1.0000"));
@@ -137,7 +137,7 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
         auto old_balance = get_xyz_balance(user);
         base_tester::push_action( xyz_name, "buyramself"_n, user, mutable_variant_object()
             ("payer",    user)
-            ("quantity", xyz("1.0000"))
+            ("quant", xyz("1.0000"))
         );
 
         BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance - xyz("1.0000"));
