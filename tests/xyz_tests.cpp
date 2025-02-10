@@ -231,8 +231,6 @@ const account_name user3 = "user3"_n;
 BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
 
-
-
     const std::vector<account_name> accounts = { issuer, swapper, hacker, user, user2, user3 };
     create_accounts_with_resources( accounts );
     produce_block();
