@@ -218,7 +218,74 @@ BOOST_FIXTURE_TEST_CASE(ram, eosio_system_tester) try {
 } FC_LOG_AND_RETHROW()
 
 
+// --------------------------------------------------------------------------------
+// tested: deposit, buyrex, withdraw, delegatebw,undelegatebw, refund
+// no comprehensive tests needed as direct forwarding: sellrex, mvtosavings, mvfrsavings, 
+// --------------------------------------------------------------------------------
+BOOST_FIXTURE_TEST_CASE(rex_tests, eosio_system_tester) try {
+   const std::vector<account_name> accounts = { "alice"_n, "bob"_n };
+   create_accounts_with_resources( accounts );
+   const account_name alice = accounts[0];
+   const account_name bob   = accounts[1];
 
+   // fund alice and bob
+   // ------------------
+   eosio_token.transfer(eos_name, alice, eos("100.0000"));
+   eosio_token.transfer(eos_name, bob,   eos("100.0000"));
+
+   // check that we do start with 2.1B XYZ in XYZ's account (`init` action called in deploy_contract)
+   // -----------------------------------------------------------------------------------------------
+   BOOST_REQUIRE_EQUAL(get_xyz_balance(xyz_name), xyz("2100000000.0000"));              // initial supply
+
+   // deposit
+   // ------
+   BOOST_REQUIRE_EQUAL(eosio_xyz.deposit(bob, xyz("0.0000")), error("Swap before amount must be greater than 0"));
+   BOOST_REQUIRE_EQUAL(eosio_xyz.deposit(bob, eos("0.0000")), error("Wrong token used"));
+   BOOST_REQUIRE_EQUAL(eosio_xyz.deposit(bob, xyz("1.0000")), error("no balance object found"));
+
+   // to use the xyz contract, Bob needs to have some XYZ tokens.
+   BOOST_REQUIRE_EQUAL(eosio_token.transfer(bob, xyz_name, eos("50.0000")), success()); // swap 50 EOS to XYZ
+   BOOST_REQUIRE_EQUAL(eosio_xyz.deposit(bob, xyz("10.0000")), success());
+
+   // buyrex
+   // ------
+   BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, eos("0.0000")), error("must use positive amount")); 
+   BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, xyz("-1.0000")), error("must use positive amount"));
+   
+   BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, eos("1.0000")), success()); // buyrex works whether you use EOS
+   BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, xyz("1.0000")), success()); // or XYZ
+   BOOST_REQUIRE_EQUAL(get_rex_balance(bob), rex(20000'0000u));
+
+   // mvtosavings
+   // -----------
+   BOOST_REQUIRE_EQUAL(eosio_xyz.mvtosavings(bob, rex(20000'0000u)), success()); 
+
+   // mvfrsavings
+   // -----------
+   BOOST_REQUIRE_EQUAL(eosio_xyz.mvfrsavings(bob, rex(20000'0000u)), success());
+   
+   // sellrex
+   // ------
+   BOOST_REQUIRE_EQUAL(eosio_xyz.sellrex(bob, eos("0.0000")), error("asset must be a positive amount of (REX, 4)"));
+   BOOST_REQUIRE_EQUAL(eosio_xyz.sellrex(bob, xyz("-1.0000")), error("asset must be a positive amount of (REX, 4)"));
+   BOOST_REQUIRE_EQUAL(eosio_xyz.sellrex(bob, xyz("1.0000")), error("asset must be a positive amount of (REX, 4)"));
+
+   BOOST_REQUIRE_EQUAL(eosio_xyz.sellrex(bob, rex(20000'0000u)), error("insufficient available rex")); 
+   produce_block();
+   produce_block( fc::days(30) ); // must wait
+   BOOST_REQUIRE_EQUAL(eosio_xyz.sellrex(bob, rex(20000'0000u)), success());
+
+   // withdraw
+   // --------
+   BOOST_REQUIRE_EQUAL(eosio_xyz.withdraw(bob, eos("11.0000")), error("insufficient funds")); // we deposited only 10 XYZ
+
+   BOOST_REQUIRE_EQUAL(eosio_xyz.withdraw(bob, eos("5.0000")), success());  // withdraw works whether you use EOS or XYZ
+   BOOST_REQUIRE_EQUAL(get_xyz_balance(bob), xyz("45.0000"));               // check that it got converted back into XYZ
+
+   BOOST_REQUIRE_EQUAL(eosio_xyz.withdraw(bob, xyz("5.0000")), success());
+   BOOST_REQUIRE_EQUAL(get_xyz_balance(bob), xyz("50.0000"));               // check that it got converted back into XYZ
+
+} FC_LOG_AND_RETHROW()
 
 
 const account_name issuer = "issuer"_n;

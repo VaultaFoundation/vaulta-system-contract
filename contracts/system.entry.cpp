@@ -477,12 +477,12 @@ class [[eosio::contract("system")]] system_contract : public contract {
             ).send();
         }
 
-        ACTION mvtosavings( const name& account, const asset& rex ){
+        ACTION mvtosavings( const name& owner, const asset& rex ){
             action(
-                permission_level{account, "active"_n},
+                permission_level{owner, "active"_n},
                 "eosio"_n,
                 "mvtosavings"_n,
-                std::make_tuple(account, rex)
+                std::make_tuple(owner, rex)
             ).send();
         }
 

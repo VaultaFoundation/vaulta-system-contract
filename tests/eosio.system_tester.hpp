@@ -34,6 +34,10 @@ public:
    static symbol xyz_symbol() { return symbol{XYZ_SYM}; }
    static symbol eos_symbol() { return symbol{CORE_SYM}; }
 
+   ~eosio_system_tester() {
+      skip_validate = true;
+   }
+
    // -----------------
    // contract
    // -----------------
@@ -150,6 +154,66 @@ public:
          auto act    = "sellram"_n;
          auto params = serialize(_tester.xyz_abi_ser, act, mvo()("account", account)("bytes", bytes));
          return push_action(_contract_name, act, std::move(params), {account});
+      }
+
+      action_result deposit(name owner, const asset& amount) {
+         auto act    = "deposit"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act, mvo()("owner", owner)("amount", amount));
+         return push_action(_contract_name, act, std::move(params), {owner});
+      }
+
+      action_result buyrex(name from, const asset& amount) {
+         auto act    = "buyrex"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act, mvo()("from", from)("amount", amount));
+         return push_action(_contract_name, act, std::move(params), {from});
+      }
+
+      action_result sellrex(name from, const asset& rex) {
+         auto act    = "sellrex"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act, mvo()("from", from)("rex", rex));
+         return push_action(_contract_name, act, std::move(params), {from});
+      }
+
+      action_result mvtosavings(name owner, const asset& rex) {
+         auto act    = "mvtosavings"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act, mvo()("owner", owner)("rex", rex));
+         return push_action(_contract_name, act, std::move(params), {owner});
+      }
+
+      action_result mvfrsavings(name owner, const asset& rex) {
+         auto act    = "mvfrsavings"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act, mvo()("owner", owner)("rex", rex));
+         return push_action(_contract_name, act, std::move(params), {owner});
+      }
+
+      action_result withdraw(name owner, const asset& amount) {
+         auto act    = "withdraw"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act, mvo()("owner", owner)("amount", amount));
+         return push_action(_contract_name, act, std::move(params), {owner});
+      }
+
+      action_result delegatebw(name from, name receiver, const asset& stake_net_quantity,
+                               const asset& stake_cpu_quantity, bool transfer) {
+         auto act    = "delegatebw"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act,
+                                 mvo()("from", from)("receiver", receiver)("stake_net_quantity", stake_net_quantity)(
+                                    "stake_cpu_quantity", stake_cpu_quantity)("transfer", transfer));
+         return push_action(_contract_name, act, std::move(params), {from});
+      }
+
+      action_result undelegatebw(name from, name receiver, const asset& unstake_net_quantity,
+                                 const asset& unstake_cpu_quantity) {
+         auto act    = "undelegatebw"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act,
+                                 mvo()("from", from)("receiver", receiver)("unstake_net_quantity", unstake_net_quantity)(
+                                    "unstake_cpu_quantity", unstake_cpu_quantity));
+         return push_action(_contract_name, act, std::move(params), {from});
+      }
+
+      action_result refund(name owner) {
+         auto act    = "refund"_n;
+         auto params = serialize(_tester.xyz_abi_ser, act, mvo()("owner", owner));
+         return push_action(_contract_name, act, std::move(params), {owner});
       }
 
       account_name         _contract_name;
