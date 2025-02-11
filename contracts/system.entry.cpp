@@ -492,7 +492,6 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION sellrex( const name& from, const asset& rex ){
-            enforce_symbol(amount);
             action(
                 permission_level{from, "active"_n},
                 "eosio"_n,

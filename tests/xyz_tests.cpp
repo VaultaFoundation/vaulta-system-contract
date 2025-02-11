@@ -249,12 +249,12 @@ BOOST_FIXTURE_TEST_CASE(rex_tests, eosio_system_tester) try {
 
    // buyrex
    // ------
-   BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, eos("0.0000")), error("must use positive amount")); 
+   BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, eos("1.0000")), error("Wrong token used")); 
+   BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, asset::from_string("1.0000 BOGUS")), error("Wrong token used")); 
+   BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, xyz("0.0000")), error("must use positive amount"));
    BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, xyz("-1.0000")), error("must use positive amount"));
    
-   BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, eos("1.0000")), success()); // buyrex works whether you use EOS
-   BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, xyz("1.0000")), success()); // or XYZ
-   //BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, asset::from_string("1.0000 BOGUS")), success()); // or anything
+   BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, xyz("2.0000")), success());
    BOOST_REQUIRE_EQUAL(get_rex_balance(bob), rex(20000'0000u));
 
    // mvtosavings
@@ -277,13 +277,14 @@ BOOST_FIXTURE_TEST_CASE(rex_tests, eosio_system_tester) try {
 
    // withdraw
    // --------
-   BOOST_REQUIRE_EQUAL(eosio_xyz.withdraw(bob, eos("11.0000")), error("insufficient funds")); // we deposited only 10 XYZ
+   BOOST_REQUIRE_EQUAL(eosio_xyz.withdraw(bob, eos("1.0000")), error("Wrong token used"));
+   BOOST_REQUIRE_EQUAL(eosio_xyz.withdraw(bob, asset::from_string("5.0000 BOGUS")), error("Wrong token used"));
+   BOOST_REQUIRE_EQUAL(eosio_xyz.withdraw(bob, xyz("11.0000")), error("insufficient funds")); // we deposited only 10 XYZ
    
-   BOOST_REQUIRE_EQUAL(eosio_xyz.withdraw(bob, eos("5.0000")), success());  // withdraw works whether you use EOS or XYZ
+   BOOST_REQUIRE_EQUAL(eosio_xyz.withdraw(bob, xyz("5.0000")), success());
    BOOST_REQUIRE_EQUAL(get_xyz_balance(bob), xyz("45.0000"));               // check that it got converted back into XYZ
 
    BOOST_REQUIRE_EQUAL(eosio_xyz.withdraw(bob, xyz("5.0000")), success());
-   //BOOST_REQUIRE_EQUAL(eosio_xyz.withdraw(bob, asset::from_string("5.0000 BOGUS")), success());
    BOOST_REQUIRE_EQUAL(get_xyz_balance(bob), xyz("50.0000"));               // check that it got converted back into XYZ
 
    // delegatebw
@@ -310,11 +311,11 @@ BOOST_FIXTURE_TEST_CASE(rex_tests, eosio_system_tester) try {
 
    // undelegatebw
    // ------------
-   //BOOST_REQUIRE_EQUAL(eosio_xyz.undelegatebw(bob, bob, xyz("0.0000"), bogus_asset), success());
-   //BOOST_REQUIRE_EQUAL(eosio_xyz.undelegatebw(bob, bob, bogus_asset, xyz("0.0000")), success());
+   BOOST_REQUIRE_EQUAL(eosio_xyz.undelegatebw(bob, bob, xyz("0.0000"), bogus_asset), error("Wrong token used"));
+   BOOST_REQUIRE_EQUAL(eosio_xyz.undelegatebw(bob, bob, bogus_asset, xyz("0.0000")), error("Wrong token used"));
    BOOST_REQUIRE_EQUAL(eosio_xyz.undelegatebw(bob, bob, xyz("0.0000"), xyz("0.0000")),
                        error("must unstake a positive amount"));
-
+   
    BOOST_REQUIRE_EQUAL(eosio_xyz.undelegatebw(bob, bob, xyz("0.0000"), xyz("1.0000")), success());
    produce_block( fc::days(10) );
 
