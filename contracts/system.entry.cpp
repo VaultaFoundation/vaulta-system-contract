@@ -240,6 +240,10 @@ class [[eosio::contract("system")]] system_contract : public contract {
             return cfg.token_symbol;
         }
 
+        void enforce_symbol(const asset& quantity){
+            check(quantity.symbol == get_token_symbol(), "Wrong token used");
+        }
+
         // Send an amount of EOS from this contract to the user, should
         // only happen after sub_balance has been called to reduce their XYZ balance
         void credit_eos_to(const name& account, const asset& quantity){
@@ -459,6 +463,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION buyrex( const name& from, const asset& amount ){
+            enforce_symbol(amount);
             // Do not need a swap here because the EOS is already deposited.
             action(
                 permission_level{from, "active"_n},
@@ -487,6 +492,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION sellrex( const name& from, const asset& rex ){
+            enforce_symbol(amount);
             action(
                 permission_level{from, "active"_n},
                 "eosio"_n,
@@ -496,6 +502,8 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION withdraw( const name& owner, const asset& amount ){
+            enforce_symbol(amount);
+
             action(
                 permission_level{owner, "active"_n},
                 "eosio"_n,
@@ -574,6 +582,9 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION undelegatebw( const name& from, const name& receiver, const asset& unstake_net_quantity, const asset& unstake_cpu_quantity ){
+            enforce_symbol(unstake_cpu_quantity);
+            enforce_symbol(unstake_net_quantity);
+
             action(
                 permission_level{from, "active"_n},
                 "eosio"_n,
@@ -606,6 +617,9 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION unstaketorex( const name& owner, const name& receiver, const asset& from_net, const asset& from_cpu ){
+            enforce_symbol(from_net);
+            enforce_symbol(from_cpu);
+
             action(
                 permission_level{owner, "active"_n},
                 "eosio"_n,

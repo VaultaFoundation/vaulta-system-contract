@@ -213,6 +213,16 @@ CONTRACT mocksys : public contract {
 
         ACTION sellram( const name& account, const uint32_t& bytes ){
             asset eos_quantity = ram_to_tokens( asset(bytes, RAM), EOS );
+            const int64_t fee = ( eos_quantity.amount + 199 ) / 200;
+
+            if( fee > 0 ) {
+                action(
+                    permission_level{account, "active"_n},
+                    "eosio.token"_n,
+                    "transfer"_n,
+                    std::make_tuple(account, "eosio.ramfee"_n, asset(fee, EOS), std::string(""))
+                ).send();
+            }
 
             action(
                 permission_level{get_self(), "active"_n},
