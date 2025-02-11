@@ -305,22 +305,26 @@ BOOST_FIXTURE_TEST_CASE(rex_tests, eosio_system_tester) try {
    auto bogus_asset = asset::from_string("1.0000 BOGUS");
    BOOST_REQUIRE_EQUAL(eosio_xyz.delegatebw(bob, bob, bogus_asset, bogus_asset, false),
                        error("Wrong token used"));
+   BOOST_REQUIRE_EQUAL(eosio_xyz.delegatebw(bob, bob, xyz("1.0000"), xyz("100000.0000"), true),
+                       error("cannot use transfer flag if delegating to self"));
 
    BOOST_REQUIRE_EQUAL(eosio_xyz.delegatebw(bob, bob, xyz("1.0000"), xyz("100000.0000"), false), success());
    BOOST_REQUIRE_EQUAL(get_xyz_balance(bob), old_balance - xyz("1.0000"));
 
    // undelegatebw
    // ------------
+   BOOST_REQUIRE_EQUAL(eosio_xyz.refund(bob), error("refund request not found")); // have to undelegatebw first
    BOOST_REQUIRE_EQUAL(eosio_xyz.undelegatebw(bob, bob, xyz("0.0000"), bogus_asset), error("Wrong token used"));
    BOOST_REQUIRE_EQUAL(eosio_xyz.undelegatebw(bob, bob, bogus_asset, xyz("0.0000")), error("Wrong token used"));
    BOOST_REQUIRE_EQUAL(eosio_xyz.undelegatebw(bob, bob, xyz("0.0000"), xyz("0.0000")),
                        error("must unstake a positive amount"));
    
    BOOST_REQUIRE_EQUAL(eosio_xyz.undelegatebw(bob, bob, xyz("0.0000"), xyz("1.0000")), success());
-   produce_block( fc::days(10) );
 
    // refund
    // ------
+   BOOST_REQUIRE_EQUAL(eosio_xyz.refund(bob), error("refund is not available yet"));
+   produce_block( fc::days(10) );
    BOOST_REQUIRE_EQUAL(eosio_xyz.refund(bob), success());
    BOOST_REQUIRE_EQUAL(get_xyz_balance(bob), old_balance);
 
