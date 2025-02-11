@@ -5,7 +5,7 @@ module.exports = {
             chain: 'Jungle4',
             accounts: [
                 {
-                    name: 'mustbenothin',
+                    name: 'rebrandtests',
                     private_key: process.env.PRIVATE_KEY
                 }
             ]

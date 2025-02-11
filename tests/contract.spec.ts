@@ -11,7 +11,8 @@ const accounts = [
     'issuer',
     'swapper',
     'hacker',
-    'user'
+    'user',
+    'eosio.ramfee'
 ]
 blockchain.createAccounts(...accounts);
 
