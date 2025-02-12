@@ -19,15 +19,17 @@ BOOST_AUTO_TEST_SUITE(xyz_tests);
 // test: `transfer`, `swapto`
 // ----------------------------
 BOOST_FIXTURE_TEST_CASE(transfer_and_swapto, eosio_system_tester) try {
-   const std::vector<account_name> accounts = { "alice"_n, "bob"_n };
+   const std::vector<account_name> accounts = { "alice"_n, "bob"_n, "carol"_n };
    create_accounts_with_resources( accounts );
    const account_name alice = accounts[0];
    const account_name bob = accounts[1];
+   const account_name carol = accounts[2];
 
    // fund alice and bob
    // ------------------
    eosio_token.transfer(eos_name, alice, eos("100.0000"));
    eosio_token.transfer(eos_name, bob,   eos("100.0000"));
+   eosio_token.transfer(eos_name, carol, eos("100.0000"));
 
    // check that we do start with 2.1B XYZ in XYZ's account (`init` action called in deploy_contract)
    // -----------------------------------------------------------------------------------------------
@@ -51,17 +53,18 @@ BOOST_FIXTURE_TEST_CASE(transfer_and_swapto, eosio_system_tester) try {
    BOOST_REQUIRE(check_balances(alice, { eos("50.0000"), xyz("50.0000") }));
 
    // swap and transfer using `swapto`: convert EOS to XYZ and send to other account
+   // use `carol` as she has no XYZ to begin with
    // ------------------------------------------------------------------------------
    BOOST_REQUIRE(check_balances(bob,   { eos("100.0000"), xyz("0.0000") }));    // Bob has no XYZ
-   BOOST_REQUIRE_EQUAL(eosio_xyz.swapto(alice, bob, eos("5.0000")), success());
-   BOOST_REQUIRE(check_balances(alice, { eos("45.0000"),  xyz("50.0000") }));   // Alice spent 5 EOS to send bob 5 XYZ
+   BOOST_REQUIRE_EQUAL(eosio_xyz.swapto(carol, bob, eos("5.0000")), success());
+   BOOST_REQUIRE(check_balances(carol, { eos("95.0000"),  xyz("0.0000") }));    // Carol spent 5 EOS to send bob 5 XYZ
    BOOST_REQUIRE(check_balances(bob,   { eos("100.0000"), xyz("5.0000") }));    // unchanged EOS balance, received 5 XYZ
 
    // swap and transfer using `swapto`: convert XYZ to EOS and send to other account
-   // let's have Bob return the 5 XYZ that Alice just sent him.
+   // let's have Bob return the 5 XYZ that Carol just sent him.
    // ------------------------------------------------------------------------------
-   BOOST_REQUIRE_EQUAL(eosio_xyz.swapto(bob, alice, xyz("5.0000")), success());
-   BOOST_REQUIRE(check_balances(alice, { eos("50.0000"),  xyz("50.0000") }));   // Alice got her 5 EOS back
+   BOOST_REQUIRE_EQUAL(eosio_xyz.swapto(bob, carol, xyz("5.0000")), success());
+   BOOST_REQUIRE(check_balances(carol, { eos("100.0000"),  xyz("0.0000") }));   // Carol got her 5 EOS back
    BOOST_REQUIRE(check_balances(bob,   { eos("100.0000"), xyz("0.0000") }));    // Bob spent his 5 XYZ
 
    // check that you cannot `swapto` tokens you don't have
