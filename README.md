@@ -43,6 +43,41 @@ To deploy the contract, run:
 npx fuckyea deploy <network>
 ```
 
+### Building c++ tests
+
+You will need [`spring`](https://github.com/AntelopeIO/spring), and [`cdt`](https://github.com/AntelopeIO/cdt).
+
+You must have the [`eos-system-contracts`](https://github.com/eosnetworkfoundation/eos-system-contracts) locally, and built already.
+Add their location to your path: 
+
+```bash
+export SYSTEM_CONTRACTS_PATH=/path/to/eos-system-contracts/build
+```
+
+Then create a build directory:
+
+```bash
+cd xyz-system-contract
+mkdir build
+cd build
+```
+
+Now you can build the contracts and tests.
+
+```bash
+export SPRING_BUILD_PATH=/path/to/spring/build
+export CDT_BUILD_PATH=/path/to/cdt/build
+
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -Dcdt_DIR="${CDT_BUILD_PATH}/lib/cmake/cdt" -Dspring_DIR="${SPRING_BUILD_PATH}/lib/cmake/spring" ..
+make -j $(nproc)
+```
+
+To run the tests: 
+```bash
+cd /xyz-system-contract/build/tests
+ctest -j $(nproc) --rerun-failed --output-on-failure
+```
+
 ## XYZ Token
 
 The XYZ token has the standard token functions and data structures.
