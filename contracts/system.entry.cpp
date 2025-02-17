@@ -191,6 +191,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
 
         typedef eosio::multi_index<"blocked"_n, blocked_recipient> blocked_table;
 
+        // Allows an account to block themselves from being a recipient of the `swapto` action.
         ACTION blockswapto(const name& account, const bool block) {
             require_auth(account);
             blocked_table _blocked(get_self(), get_self().value);
