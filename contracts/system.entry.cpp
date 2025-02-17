@@ -183,10 +183,40 @@ class [[eosio::contract("system")]] system_contract : public contract {
             ).send();
         }
 
+        TABLE blocked_recipient {
+            name account;
+
+            uint64_t primary_key() const { return account.value; }
+        };
+
+        typedef eosio::multi_index<"blocked"_n, blocked_recipient> blocked_table;
+
+        ACTION blockswapto(const name& account, const bool block) {
+            require_auth(account);
+            blocked_table _blocked(get_self(), get_self().value);
+            auto itr = _blocked.find(account.value);
+            if(block) {
+                if(itr == _blocked.end()) {
+                    _blocked.emplace(get_self(), [&](auto& b) {
+                        b.account = account;
+                    });
+                }
+            } else {
+                if(itr != _blocked.end()) {
+                    _blocked.erase(itr);
+                }
+            }
+        }
+        
+
         // This action allows exchanges to support "swap & withdraw" for their users and have the swapped tokens flow
         // to the users instead of to their own hot wallets.
         ACTION swapto(const name& from, const name& to, const asset& quantity, const std::string& memo) {
             require_auth(from);
+
+            blocked_table _blocked(get_self(), get_self().value);
+            auto itr = _blocked.find(to.value);
+            check(itr == _blocked.end(), "Recipient is blocked from receiving swapped tokens");
 
             if(quantity.symbol == EOS){
                 // First swap the EOS to XYZ and credit it to the user
