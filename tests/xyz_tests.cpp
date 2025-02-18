@@ -435,7 +435,7 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
                 ("memo", "")
             ),
             eosio_assert_message_exception,
-            eosio_assert_message_is("Recipient is blocked from receiving swapped tokens")
+            eosio_assert_message_is("Recipient is blocked from receiving swapped tokens: " + exchange.to_string())
         );
         produce_block();
     }

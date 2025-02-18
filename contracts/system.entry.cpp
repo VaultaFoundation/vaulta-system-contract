@@ -198,7 +198,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
             auto itr = _blocked.find(account.value);
             if(block) {
                 if(itr == _blocked.end()) {
-                    _blocked.emplace(get_self(), [&](auto& b) {
+                    _blocked.emplace(account, [&](auto& b) {
                         b.account = account;
                     });
                 }
@@ -217,7 +217,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
 
             blocked_table _blocked(get_self(), get_self().value);
             auto itr = _blocked.find(to.value);
-            check(itr == _blocked.end(), "Recipient is blocked from receiving swapped tokens");
+            check(itr == _blocked.end(), "Recipient is blocked from receiving swapped tokens: " + to.to_string());
 
             if(quantity.symbol == EOS){
                 // First swap the EOS to XYZ and credit it to the user
