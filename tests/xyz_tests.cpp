@@ -8,6 +8,7 @@
 #include <sstream>
 #include <fc/log/logger.hpp>
 #include <eosio/chain/exceptions.hpp>
+#include "contracts.hpp"
 
 #include "eosio.system_tester.hpp"
 
@@ -565,7 +566,7 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
     transfer(eos_name, user, eos("100000.0000"));
     transfer(user, xyz_name, eos("100000.0000"), user);
-    active_and_vote_producers();
+    vector<name> producers = active_and_vote_producers();
 
     // should be able to powerup and get overages back in XYZ
     // TODO: Powerup isn't initialized
@@ -612,6 +613,87 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
         );
 
         BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance);
+
+    }
+
+    // claimrewards
+    {
+        auto producer = producers[0];
+        auto old_balance = get_xyz_balance(producer);
+        base_tester::push_action( xyz_name, "claimrewards"_n, producer, mutable_variant_object()
+            ("owner",    producer)
+        );
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(producer) > old_balance, true);
+    }
+
+    // linkauth
+    {
+        base_tester::push_action( xyz_name, "linkauth"_n, user, mutable_variant_object()
+            ("account",    user)
+            ("code",       xyz_name)
+            ("type",       "transfer"_n)
+            ("requirement", "active"_n)
+        );
+    }
+
+    // unlinkauth
+    {
+        base_tester::push_action( xyz_name, "unlinkauth"_n, user, mutable_variant_object()
+            ("account",    user)
+            ("code",       xyz_name)
+            ("type",       "transfer"_n)
+        );
+    }
+
+    // updateauth and deleteauth
+    {
+        base_tester::push_action( xyz_name, "updateauth"_n, user, mutable_variant_object()
+            ("account",    user)
+            ("permission", "test"_n)
+            ("parent",     "active"_n)
+            ("auth",       authority(1, {key_weight{get_public_key(user, "active"), 1}}))
+        );
+
+        base_tester::push_action( xyz_name, "deleteauth"_n, user, mutable_variant_object()
+            ("account",    user)
+            ("permission", "test"_n)
+        );
+    }
+
+    // setcode and setabi
+    {
+        // create contract account
+        name contract_account = "contractest"_n;
+        create_accounts_with_resources( { contract_account } );
+
+        // get some CPU and NET with delegatebw
+        base_tester::push_action( eos_name, "delegatebw"_n, eos_name, mutable_variant_object()
+            ("from",    eos_name)
+            ("receiver", contract_account)
+            ("stake_net_quantity", eos("10.0000"))
+            ("stake_cpu_quantity", eos("500.0000"))
+            ("transfer", false)
+        );
+//
+        base_tester::push_action( eos_name, "buyram"_n, eos_name, mutable_variant_object()
+            ("payer",    eos_name)
+            ("receiver", contract_account)
+            ("quant", eos("1000000.0000"))
+        );
+
+//         base_tester::push_action( xyz_name, "setcode"_n, contract_account, mutable_variant_object()
+//             ("account",    contract_account)
+//             ("vmtype",     0)
+//             ("vmversion",  0)
+//             ("code",       eos_contracts::token_wasm() )
+//         );
+
+        base_tester::push_action( xyz_name, "setabi"_n, contract_account, mutable_variant_object()
+            ("account",    contract_account)
+            ("abi",        eos_contracts::token_abi().data() )
+        );
+
 
     }
 

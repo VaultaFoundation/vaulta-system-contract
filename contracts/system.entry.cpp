@@ -4,6 +4,7 @@
 #include <eosio/singleton.hpp>
 #include <system/token.hpp>
 #include <system/oldsystem.hpp>
+#include <eosio/binary_extension.hpp>
 using namespace eosio;
 using namespace system_token;
 using namespace system_origin;
@@ -648,6 +649,108 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 std::make_tuple(owner, eos_balance)
             ).send();
         }
+
+        ACTION claimrewards(const name owner){
+            auto eos_balance = get_eos_balance(owner);
+            action(
+                permission_level{owner, "active"_n},
+                "eosio"_n,
+                "claimrewards"_n,
+                std::make_tuple(owner)
+            ).send();
+
+            action(
+                permission_level{get_self(), "active"_n},
+                get_self(),
+                "swapexcess"_n,
+                std::make_tuple(owner, eos_balance)
+            ).send();
+        }
+
+        ACTION linkauth(
+            name                   account,
+            name                   code,
+            name                   type,
+            name                   requirement,
+            binary_extension<name> authorized_by
+        ){
+            action(
+                permission_level{account, "active"_n},
+                "eosio"_n,
+                "linkauth"_n,
+                std::make_tuple(account, code, type, requirement, authorized_by)
+            ).send();
+        }
+
+        ACTION unlinkauth(name                   account,
+            name                   code,
+            name                   type,
+            binary_extension<name> authorized_by
+        ){
+            action(
+                permission_level{account, "active"_n},
+                "eosio"_n,
+                "unlinkauth"_n,
+                std::make_tuple(account, code, type, authorized_by)
+            ).send();
+        }
+
+        ACTION updateauth(
+            name                   account,
+            name                   permission,
+            name                   parent,
+            authority              auth,
+            binary_extension<name> authorized_by
+        ){
+            action(
+                permission_level{account, "active"_n},
+                "eosio"_n,
+                "updateauth"_n,
+                std::make_tuple(account, permission, parent, auth, authorized_by)
+            ).send();
+        }
+
+        ACTION deleteauth(
+            name account,
+            name permission,
+            binary_extension<name> authorized_by
+        ){
+            action(
+                permission_level{account, "active"_n},
+                "eosio"_n,
+                "deleteauth"_n,
+                std::make_tuple(account, permission, authorized_by)
+            ).send();
+        }
+
+        ACTION setabi(
+            const name& account,
+            const std::vector<char>& abi,
+            const binary_extension<std::string>& memo
+        ){
+            action(
+                permission_level{account, "active"_n},
+                "eosio"_n,
+                "setabi"_n,
+                std::make_tuple(account, abi, memo)
+            ).send();
+        }
+
+        ACTION setcode(
+            const name& account,
+            uint8_t vmtype,
+            uint8_t vmversion,
+            const std::vector<char>& code,
+            const binary_extension<std::string>& memo
+        ){
+            action(
+                permission_level{account, "active"_n},
+                "eosio"_n,
+                "setcode"_n,
+                std::make_tuple(account, vmtype, vmversion, code, memo)
+            ).send();
+        }
+
 
         ACTION noop(std::string memo){}
 };
