@@ -183,6 +183,9 @@ class [[eosio::contract("system")]] system_contract : public contract {
             ).send();
         }
 
+        // allow account owners to disallow the `swapto` action with their account as destination.
+        // This has been requested by exchanges who prefer to receive funds into their hot wallets 
+        // exclusively via the root `transfer` action.
         TABLE blocked_recipient {
             name account;
 
