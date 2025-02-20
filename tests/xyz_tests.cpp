@@ -458,6 +458,43 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
         BOOST_REQUIRE_EQUAL(get_xyz_balance(exchange), xyz("2.0000"));
     }
 
+    // can block from the contract itself
+    {
+        base_tester::push_action( xyz_name, "blockswapto"_n, xyz_name, mutable_variant_object()
+            ("account",    exchange)
+            ("block",      true)
+        );
+        base_tester::push_action( xyz_name, "blockswapto"_n, xyz_name, mutable_variant_object()
+            ("account",    exchange)
+            ("block",      false)
+        );
+        produce_block();
+        // can also do it from "eosio"
+        base_tester::push_action( xyz_name, "blockswapto"_n, eos_name, mutable_variant_object()
+            ("account",    exchange)
+            ("block",      true)
+        );
+        // and can always unblock yourself
+        base_tester::push_action( xyz_name, "blockswapto"_n, exchange, mutable_variant_object()
+            ("account",    exchange)
+            ("block",      false)
+        );
+        produce_block();
+    }
+
+    // should never be able to add to a blocklist if not one of those three accounts
+    {
+        // catch missing auth exception
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "blockswapto"_n, user, mutable_variant_object()
+                ("account",    exchange)
+                ("block",      true)
+            ),
+            missing_auth_exception,
+            fc_exception_message_starts_with("missing authority of ")
+        );
+    }
+
 
 
 

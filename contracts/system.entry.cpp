@@ -196,7 +196,11 @@ class [[eosio::contract("system")]] system_contract : public contract {
 
         // Allows an account to block themselves from being a recipient of the `swapto` action.
         ACTION blockswapto(const name& account, const bool block) {
-            require_auth(account);
+            // The account owner, this contract, or the system contract can block or unblock an account.
+            if(!has_auth(get_self()) && !has_auth("eosio"_n)) {
+                require_auth(account);
+            }
+
             blocked_table _blocked(get_self(), get_self().value);
             auto itr = _blocked.find(account.value);
             if(block) {
