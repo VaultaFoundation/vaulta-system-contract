@@ -469,12 +469,11 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
             ("block",      false)
         );
         produce_block();
-        // can also do it from "eosio"
-        base_tester::push_action( xyz_name, "blockswapto"_n, eos_name, mutable_variant_object()
+        // and can always unblock yourself
+        base_tester::push_action( xyz_name, "blockswapto"_n, xyz_name, mutable_variant_object()
             ("account",    exchange)
             ("block",      true)
         );
-        // and can always unblock yourself
         base_tester::push_action( xyz_name, "blockswapto"_n, exchange, mutable_variant_object()
             ("account",    exchange)
             ("block",      false)
