@@ -74,6 +74,7 @@ BOOST_FIXTURE_TEST_CASE(transfer_and_swapto, eosio_system_tester) try {
                        error("overdrawn balance"));
    BOOST_REQUIRE_EQUAL(eosio_xyz.swapto(bob, alice, xyz("150.0000")),
                        error("overdrawn balance"));
+
 } FC_LOG_AND_RETHROW()
 
 // ----------------------------
@@ -341,11 +342,12 @@ const account_name hacker = "hacker"_n;
 const account_name user = "user"_n;
 const account_name user2 = "user2"_n;
 const account_name user3 = "user3"_n;
+const account_name exchange = "exchange"_n;
 
 BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
 
-    const std::vector<account_name> accounts = { issuer, swapper, hacker, user, user2, user3 };
+    const std::vector<account_name> accounts = { issuer, swapper, hacker, user, user2, user3, exchange };
     create_accounts_with_resources( accounts );
     produce_block();
 
@@ -404,6 +406,98 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
     BOOST_REQUIRE_EQUAL(get_xyz_balance(swapper), xyz("1.0000"));
     BOOST_REQUIRE_EQUAL(get_xyz_balance(user), xyz("1.0000"));
 
+    // check that an account can block themselves from receiving swapto
+    // ----------------------------------------------------------------
+    // can swapto to the account
+    {
+        base_tester::push_action( xyz_name, "swapto"_n, swapper, mutable_variant_object()
+            ("from",    swapper)
+            ("to",      exchange )
+            ("quantity", eos("1.0000"))
+            ("memo", "")
+        );
+        BOOST_REQUIRE_EQUAL(get_balance(swapper), eos("97.0000"));
+        BOOST_REQUIRE_EQUAL(get_balance(user), eos("100.0000"));
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(swapper), xyz("1.0000"));
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(exchange), xyz("1.0000"));
+        produce_block();
+    }
+    // can block the recipient and swapto will fail
+    {
+        base_tester::push_action( xyz_name, "blockswapto"_n, exchange, mutable_variant_object()
+            ("account",    exchange)
+            ("block",      true)
+        );
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "swapto"_n, swapper, mutable_variant_object()
+                ("from",    swapper)
+                ("to",      exchange )
+                ("quantity", eos("1.0000"))
+                ("memo", "")
+            ),
+            eosio_assert_message_exception,
+            eosio_assert_message_is("Recipient is blocked from receiving swapped tokens: " + exchange.to_string())
+        );
+        produce_block();
+    }
+
+    // can unblock and swapto
+    {
+        base_tester::push_action( xyz_name, "blockswapto"_n, exchange, mutable_variant_object()
+            ("account",    exchange)
+            ("block",      false)
+        );
+        base_tester::push_action( xyz_name, "swapto"_n, swapper, mutable_variant_object()
+            ("from",    swapper)
+            ("to",      exchange )
+            ("quantity", eos("1.0000"))
+            ("memo", "")
+        );
+        BOOST_REQUIRE_EQUAL(get_balance(swapper), eos("96.0000"));
+        BOOST_REQUIRE_EQUAL(get_balance(user), eos("100.0000"));
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(swapper), xyz("1.0000"));
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(exchange), xyz("2.0000"));
+    }
+
+    // can block from the contract itself
+    {
+        base_tester::push_action( xyz_name, "blockswapto"_n, xyz_name, mutable_variant_object()
+            ("account",    exchange)
+            ("block",      true)
+        );
+        base_tester::push_action( xyz_name, "blockswapto"_n, xyz_name, mutable_variant_object()
+            ("account",    exchange)
+            ("block",      false)
+        );
+        produce_block();
+        // and can always unblock yourself
+        base_tester::push_action( xyz_name, "blockswapto"_n, xyz_name, mutable_variant_object()
+            ("account",    exchange)
+            ("block",      true)
+        );
+        base_tester::push_action( xyz_name, "blockswapto"_n, exchange, mutable_variant_object()
+            ("account",    exchange)
+            ("block",      false)
+        );
+        produce_block();
+    }
+
+    // should never be able to add to a blocklist if not one of those three accounts
+    {
+        // catch missing auth exception
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "blockswapto"_n, user, mutable_variant_object()
+                ("account",    exchange)
+                ("block",      true)
+            ),
+            missing_auth_exception,
+            fc_exception_message_starts_with("missing authority of ")
+        );
+    }
+
+
+
+
     // swap some EOS to XYZ
     transfer(user, xyz_name, eos("50.0000"), user);
     transfer(user2, xyz_name, eos("50.0000"), user2);
@@ -412,7 +506,7 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
     // Should be able to automatically swap tokens and use system contracts
     {
         auto old_balance = get_xyz_balance(user);
-        base_tester::push_action( xyz_name, "bidname"_n, swapper, mutable_variant_object()
+        base_tester::push_action( xyz_name, "bidname"_n, user, mutable_variant_object()
             ("bidder",    user)
             ("newname",   "newname")
             ("bid",       xyz("1.0000"))

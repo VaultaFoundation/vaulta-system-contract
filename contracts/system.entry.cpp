@@ -184,10 +184,48 @@ class [[eosio::contract("system")]] system_contract : public contract {
             ).send();
         }
 
+        // allow account owners to disallow the `swapto` action with their account as destination.
+        // This has been requested by exchanges who prefer to receive funds into their hot wallets 
+        // exclusively via the root `transfer` action.
+        TABLE blocked_recipient {
+            name account;
+
+            uint64_t primary_key() const { return account.value; }
+        };
+
+        typedef eosio::multi_index<"blocked"_n, blocked_recipient> blocked_table;
+
+        // Allows an account to block themselves from being a recipient of the `swapto` action.
+        ACTION blockswapto(const name& account, const bool block) {
+            // The account owner or this contract can block or unblock an account.
+            if(!has_auth(get_self())) {
+                require_auth(account);
+            }
+
+            blocked_table _blocked(get_self(), get_self().value);
+            auto itr = _blocked.find(account.value);
+            if(block) {
+                if(itr == _blocked.end()) {
+                    _blocked.emplace(account, [&](auto& b) {
+                        b.account = account;
+                    });
+                }
+            } else {
+                if(itr != _blocked.end()) {
+                    _blocked.erase(itr);
+                }
+            }
+        }
+        
+
         // This action allows exchanges to support "swap & withdraw" for their users and have the swapped tokens flow
         // to the users instead of to their own hot wallets.
         ACTION swapto(const name& from, const name& to, const asset& quantity, const std::string& memo) {
             require_auth(from);
+
+            blocked_table _blocked(get_self(), get_self().value);
+            auto itr = _blocked.find(to.value);
+            check(itr == _blocked.end(), "Recipient is blocked from receiving swapped tokens: " + to.to_string());
 
             if(quantity.symbol == EOS){
                 // First swap the EOS to XYZ and credit it to the user
@@ -327,6 +365,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         // For details about what each action does, please see the base system contracts.
 
         ACTION bidname( const name& bidder, const name& newname, const asset& bid ){
+            require_auth(bidder);
             swap_before_forwarding(bidder, bid);
 
             action(
@@ -338,6 +377,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION bidrefund( const name& bidder, const name& newname ){
+            require_auth(bidder);
             auto eos_balance = get_eos_balance(bidder);
 
             action(
@@ -356,6 +396,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION buyram( const name& payer, const name& receiver, const asset& quant ){
+            require_auth(payer);
             swap_before_forwarding(payer, quant);
             action(
                 permission_level{payer, "active"_n},
@@ -366,6 +407,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION buyramburn( const name& payer, const asset& quantity, const std::string& memo ){
+            require_auth(payer);
             swap_before_forwarding(payer, quantity);
             action(
                 permission_level{payer, "active"_n},
@@ -376,6 +418,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION buyrambytes( name payer, name receiver, uint32_t bytes ){
+            require_auth(payer);
             rammarket _rammarket("eosio"_n, "eosio"_n.value);
             auto itr = _rammarket.find(RAMCORE.raw());
             const int64_t ram_reserve   = itr->base.balance.amount;
@@ -408,6 +451,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION buyramself( const name& payer, const asset& quant ){
+            require_auth(payer);
             swap_before_forwarding(payer, quant);
             action(
                 permission_level{payer, "active"_n},
@@ -418,6 +462,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION ramburn( const name& owner, const int64_t& bytes, const std::string& memo ){
+            require_auth(owner);
             action(
                 permission_level{owner, "active"_n},
                 "eosio"_n,
@@ -427,6 +472,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION ramtransfer( const name& from, const name& to, const int64_t& bytes, const std::string& memo ){
+            require_auth(from);
             action(
                 permission_level{from, "active"_n},
                 "eosio"_n,
@@ -436,6 +482,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION sellram( const name& account, const int64_t& bytes ){
+            require_auth(account);
             asset eos_before = get_eos_balance(account);
 
             action(
@@ -454,6 +501,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION deposit( const name& owner, const asset& amount ){
+            require_auth(owner);
             swap_before_forwarding(owner, amount);
             action(
                 permission_level{owner, "active"_n},
@@ -464,6 +512,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION buyrex( const name& from, const asset& amount ){
+            require_auth(from);
             enforce_symbol(amount);
             // Do not need a swap here because the EOS is already deposited.
             action(
@@ -475,6 +524,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION mvfrsavings( const name& owner, const asset& rex ){
+            require_auth(owner);
             action(
                 permission_level{owner, "active"_n},
                 "eosio"_n,
@@ -484,6 +534,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION mvtosavings( const name& owner, const asset& rex ){
+            require_auth(owner);
             action(
                 permission_level{owner, "active"_n},
                 "eosio"_n,
@@ -493,6 +544,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION sellrex( const name& from, const asset& rex ){
+            require_auth(from);
             action(
                 permission_level{from, "active"_n},
                 "eosio"_n,
@@ -502,6 +554,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION withdraw( const name& owner, const asset& amount ){
+            require_auth(owner);
             enforce_symbol(amount);
 
             action(
@@ -515,6 +568,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION newaccount( const name& creator, const name& account_name, const authority& owner, const authority& active ){
+            require_auth(creator);
             action(
                 permission_level{creator, "active"_n},
                 "eosio"_n,
@@ -525,6 +579,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
 
         // Simplified account creation action that only requires a public key instead of 2 authority objects
         ACTION newaccount2( const name& creator, const name& account_name, eosio::public_key key ){
+            require_auth(creator);
             authority auth = authority{
                 .threshold = 1,
                 .keys = {
@@ -541,6 +596,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION powerup( const name& payer, const name& receiver, uint32_t days, int64_t net_frac, int64_t cpu_frac, const asset& max_payment ){
+            require_auth(payer);
             // we need to swap back any overages after the powerup, so we need to know how much was in the account before
             // otherwise this contract would have to replicate a large portion of the powerup code which is unnecessary
             asset eos_balance_before_swap = get_eos_balance(payer);
@@ -565,6 +621,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION delegatebw( const name& from, const name& receiver, const asset& stake_net_quantity, const asset& stake_cpu_quantity, const bool& transfer ){
+            require_auth(from);
             swap_before_forwarding(from, stake_net_quantity + stake_cpu_quantity);
 
             action(
@@ -582,6 +639,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION undelegatebw( const name& from, const name& receiver, const asset& unstake_net_quantity, const asset& unstake_cpu_quantity ){
+            require_auth(from);
             enforce_symbol(unstake_cpu_quantity);
             enforce_symbol(unstake_net_quantity);
 
@@ -599,6 +657,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION voteproducer( const name& voter, const name& proxy, const std::vector<name>& producers ){
+            require_auth(voter);
             action(
                 permission_level{voter, "active"_n},
                 "eosio"_n,
@@ -608,6 +667,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION voteupdate( const name& voter_name ){
+            require_auth(voter_name);
             action(
                 permission_level{voter_name, "active"_n},
                 "eosio"_n,
@@ -617,6 +677,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION unstaketorex( const name& owner, const name& receiver, const asset& from_net, const asset& from_cpu ){
+            require_auth(owner);
             enforce_symbol(from_net);
             enforce_symbol(from_cpu);
 
@@ -634,6 +695,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION refund( const name& owner ){
+            require_auth(owner);
             auto eos_balance = get_eos_balance(owner);
             action(
                 permission_level{owner, "active"_n},
