@@ -505,7 +505,7 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
     // Should be able to automatically swap tokens and use system contracts
     {
         auto old_balance = get_xyz_balance(user);
-        base_tester::push_action( xyz_name, "bidname"_n, swapper, mutable_variant_object()
+        base_tester::push_action( xyz_name, "bidname"_n, user, mutable_variant_object()
             ("bidder",    user)
             ("newname",   "newname")
             ("bid",       xyz("1.0000"))
