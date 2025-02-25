@@ -751,6 +751,17 @@ class [[eosio::contract("system")]] system_contract : public contract {
             ).send();
         }
 
+        ACTION donatetorex( const name& payer, const asset& quantity, const std::string& memo ){
+            require_auth(payer);
+            swap_before_forwarding(payer, quantity);
+            action(
+                permission_level{payer, "active"_n},
+                "eosio"_n,
+                "donatetorex"_n,
+                std::make_tuple(payer, asset(quantity.amount, EOS), memo)
+            ).send();
+        }
+
 
         ACTION noop(std::string memo){}
 };

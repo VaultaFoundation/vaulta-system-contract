@@ -564,6 +564,54 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
     }
 
 
+    // should be able to donate to rex
+    {
+        // need to buy back in, as rex is no longer initialized
+        {            base_tester::push_action( xyz_name, "deposit"_n, user, mutable_variant_object()
+                ("owner",    user)
+                ("amount", xyz("1.0000"))
+            );
+
+            base_tester::push_action( xyz_name, "buyrex"_n, user, mutable_variant_object()
+                ("from",    user)
+                ("amount", xyz("1.0000"))
+            );
+        }
+
+        auto old_balance = get_xyz_balance(user);
+        base_tester::push_action( xyz_name, "donatetorex"_n, user, mutable_variant_object()
+            ("payer",    user)
+            ("quantity", xyz("1.0000"))
+            ("memo", "")
+        );
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance - xyz("1.0000"));
+
+        // cannot donate with EOS
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "donatetorex"_n, user, mutable_variant_object()
+                ("payer",    user)
+                ("quantity", eos("1.0000"))
+                ("memo", "")
+            ),
+            eosio_assert_message_exception,
+            eosio_assert_message_is("Wrong token used")
+        );
+
+        // cannot donate with wrong account
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "donatetorex"_n, user, mutable_variant_object()
+                ("payer",    user2)
+                ("quantity", xyz("1.0000"))
+                ("memo", "")
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user2")
+
+        );
+    }
+
+
     transfer(eos_name, user, eos("100000.0000"));
     transfer(user, xyz_name, eos("100000.0000"), user);
     vector<name> producers = active_and_vote_producers();
@@ -689,11 +737,10 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 //             ("code",       eos_contracts::token_wasm() )
 //         );
 
-        base_tester::push_action( xyz_name, "setabi"_n, contract_account, mutable_variant_object()
-            ("account",    contract_account)
-            ("abi",        eos_contracts::token_abi().data() )
-        );
-
+//         base_tester::push_action( xyz_name, "setabi"_n, contract_account, mutable_variant_object()
+//             ("account",    contract_account)
+//             ("abi",        eos_contracts::token_abi().data() )
+//         );
 
     }
 
