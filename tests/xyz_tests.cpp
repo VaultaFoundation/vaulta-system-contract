@@ -538,16 +538,6 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
     }
 
 
-    auto test_auth_failure = [&](auto& act, name account) {
-        BOOST_REQUIRE_EXCEPTION(
-            act,
-            missing_auth_exception,
-            fc_exception_message_is("missing authority of " + account.to_string())
-        );
-    };
-
-
-
     // swap some EOS to XYZ
     transfer(user, xyz_name, eos("50.0000"), user);
     transfer(user2, xyz_name, eos("50.0000"), user2);
@@ -1136,8 +1126,6 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
             ("max_payment", xyz("100000.0000"))
         );
 
-
-        auto new_balance = get_xyz_balance(powerupuser);
         // new balance should be old balance - 62500.0000 EOS
         BOOST_REQUIRE_EQUAL(get_xyz_balance(powerupuser), old_balance - xyz("62500.0000"));
     }
