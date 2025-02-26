@@ -414,7 +414,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 permission_level{payer, "active"_n},
                 "eosio"_n,
                 "buyramburn"_n,
-                std::make_tuple(payer, asset(quantity.amount, EOS), memo)
+                std::make_tuple(payer, asset(quantity.amount, EOS), std::cref(memo))
             ).send();
         }
 
@@ -468,7 +468,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 permission_level{owner, "active"_n},
                 "eosio"_n,
                 "ramburn"_n,
-                std::make_tuple(owner, bytes, memo)
+                std::make_tuple(owner, bytes, std::cref(memo))
             ).send();
         }
 
@@ -478,7 +478,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 permission_level{from, "active"_n},
                 "eosio"_n,
                 "ramtransfer"_n,
-                std::make_tuple(from, to, bytes, memo)
+                std::make_tuple(from, to, bytes, std::cref(memo))
             ).send();
         }
 
@@ -574,7 +574,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 permission_level{creator, "active"_n},
                 "eosio"_n,
                 "newaccount"_n,
-                std::make_tuple(creator, account_name, owner, active)
+                std::make_tuple(creator, account_name, std::cref(owner), std::cref(active))
             ).send();
         }
 
@@ -663,7 +663,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 permission_level{voter, "active"_n},
                 "eosio"_n,
                 "voteproducer"_n,
-                std::make_tuple(voter, proxy, producers)
+                std::make_tuple(voter, proxy, std::cref(producers))
             ).send();
         }
 
@@ -774,7 +774,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 permission_level{account, "active"_n},
                 "eosio"_n,
                 "updateauth"_n,
-                std::make_tuple(account, permission, parent, auth, authorized_by)
+                std::make_tuple(account, permission, parent, std::cref(auth), authorized_by)
             ).send();
         }
 
@@ -802,7 +802,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 permission_level{account, "active"_n},
                 "eosio"_n,
                 "setabi"_n,
-                std::make_tuple(account, abi, memo)
+                std::make_tuple(account, std::cref(abi), std::cref(memo))
             ).send();
         }
 
@@ -818,7 +818,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 permission_level{account, "active"_n},
                 "eosio"_n,
                 "setcode"_n,
-                std::make_tuple(account, vmtype, vmversion, code, memo)
+                std::make_tuple(account, vmtype, vmversion, std::cref(code), std::cref(memo))
             ).send();
         }
 
@@ -829,7 +829,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 permission_level{payer, "active"_n},
                 "eosio"_n,
                 "donatetorex"_n,
-                std::make_tuple(payer, asset(quantity.amount, EOS), memo)
+                std::make_tuple(payer, asset(quantity.amount, EOS), std::cref(memo))
             ).send();
         }
 

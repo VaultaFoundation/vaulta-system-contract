@@ -12,6 +12,11 @@
 
 #include "eosio.system_tester.hpp"
 
+std::vector<char> prepare_wasm(const std::vector<uint8_t>& uint8_vector) {
+    std::vector<char> char_vector(uint8_vector.size());
+    std::copy(uint8_vector.begin(), uint8_vector.end(), char_vector.begin());
+    return char_vector;
+}
 
 inline constexpr int64_t powerup_frac  = 1'000'000'000'000'000ll; // 1.0 = 10^15
 inline constexpr int64_t stake_weight = 100'000'000'0000ll; // 10^12
@@ -881,9 +886,12 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
     }
 
 
+
+
     transfer(eos_name, user, eos("100000.0000"));
     transfer(user, xyz_name, eos("100000.0000"), user);
     vector<name> producers = active_and_vote_producers();
+
 
 
     // should be able to delegate and undelegate bw
@@ -938,6 +946,27 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
         BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance);
 
+    }
+
+    // should be able to unstaketorex
+    {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "unstaketorex"_n, user2, mutable_variant_object()
+                ("owner",    user)
+                ("receiver", user)
+                ("from_net", xyz("0.0000"))
+                ("from_cpu", xyz("1.0000"))
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
+        base_tester::push_action( xyz_name, "unstaketorex"_n, user, mutable_variant_object()
+            ("owner",    user)
+            ("receiver", user)
+            ("from_net", xyz("0.0000"))
+            ("from_cpu", xyz("1.0000"))
+        );
     }
 
     // claimrewards
@@ -1056,18 +1085,74 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
             ("quant", eos("1000000.0000"))
         );
 
-//         base_tester::push_action( xyz_name, "setcode"_n, contract_account, mutable_variant_object()
-//             ("account",    contract_account)
-//             ("vmtype",     0)
-//             ("vmversion",  0)
-//             ("code",       eos_contracts::token_wasm() )
-//         );
+        auto code = prepare_wasm(eos_contracts::fees_wasm());
 
-//         base_tester::push_action( xyz_name, "setabi"_n, contract_account, mutable_variant_object()
-//             ("account",    contract_account)
-//             ("abi",        eos_contracts::token_abi().data() )
-//         );
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "setcode"_n, user, mutable_variant_object()
+                ("account",    contract_account)
+                ("vmtype",     0)
+                ("vmversion",  0)
+                ("code",       code )
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of contractest")
+        );
 
+        base_tester::push_action( xyz_name, "setcode"_n, contract_account, mutable_variant_object()
+            ("account",    contract_account)
+            ("vmtype",     0)
+            ("vmversion",  0)
+            ("code",       code )
+        );
+
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "setabi"_n, user, mutable_variant_object()
+                ("account",    contract_account)
+                ("abi",        eos_contracts::token_abi() )
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of contractest")
+        );
+
+        base_tester::push_action( xyz_name, "setabi"_n, contract_account, mutable_variant_object()
+            ("account",    contract_account)
+            ("abi",        eos_contracts::token_abi() )
+        );
+
+    }
+
+    // voteproducer
+    {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "voteproducer"_n, user2, mutable_variant_object()
+                ("voter",    user)
+                ("proxy",    ""_n)
+                ("producers", std::vector<name>{producers[0]})
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
+        base_tester::push_action( xyz_name, "voteproducer"_n, user, mutable_variant_object()
+            ("voter",    user)
+            ("proxy",    ""_n)
+            ("producers", std::vector<name>{producers[0]})
+        );
+    }
+
+    // voteupdate
+    {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "voteupdate"_n, user2, mutable_variant_object()
+                ("voter_name",    user)
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
+        base_tester::push_action( xyz_name, "voteupdate"_n, user, mutable_variant_object()
+            ("voter_name",    user)
+        );
     }
 
 
