@@ -279,6 +279,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
             return cfg.token_symbol;
         }
 
+        // Enforces that the given asset has the right token symbol (XYZ)
         void enforce_symbol(const asset& quantity){
             check(quantity.symbol == get_token_symbol(), "Wrong token used");
         }
@@ -713,6 +714,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
         }
 
         ACTION claimrewards(const name owner){
+            require_auth(owner);
             auto eos_balance = get_eos_balance(owner);
             action(
                 permission_level{owner, "active"_n},
@@ -736,6 +738,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
             name                   requirement,
             binary_extension<name> authorized_by
         ){
+            require_auth(account);
             action(
                 permission_level{account, "active"_n},
                 "eosio"_n,
@@ -744,11 +747,13 @@ class [[eosio::contract("system")]] system_contract : public contract {
             ).send();
         }
 
-        ACTION unlinkauth(name                   account,
+        ACTION unlinkauth(
+            name                   account,
             name                   code,
             name                   type,
             binary_extension<name> authorized_by
         ){
+            require_auth(account);
             action(
                 permission_level{account, "active"_n},
                 "eosio"_n,
@@ -764,6 +769,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
             authority              auth,
             binary_extension<name> authorized_by
         ){
+            require_auth(account);
             action(
                 permission_level{account, "active"_n},
                 "eosio"_n,
@@ -777,6 +783,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
             name permission,
             binary_extension<name> authorized_by
         ){
+            require_auth(account);
             action(
                 permission_level{account, "active"_n},
                 "eosio"_n,
@@ -790,6 +797,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
             const std::vector<char>& abi,
             const binary_extension<std::string>& memo
         ){
+            require_auth(account);
             action(
                 permission_level{account, "active"_n},
                 "eosio"_n,
@@ -805,6 +813,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
             const std::vector<char>& code,
             const binary_extension<std::string>& memo
         ){
+            require_auth(account);
             action(
                 permission_level{account, "active"_n},
                 "eosio"_n,
