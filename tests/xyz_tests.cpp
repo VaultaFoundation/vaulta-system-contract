@@ -1263,12 +1263,17 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
             );
         }
 
+        std::cout << "testdata before: " << get_account_ram(xyz_name) << std::endl;
+        std::cout << "testdata before2: " << get_account_ram(eos_name) << std::endl;
         auto xyz_ram_before = get_ram_bytes(xyz_name);
         auto user_ram_before = get_ram_bytes(swapram1);
         transfer(swapram1, xyz_name, eos("100.0000"), swapram1);
 
         auto xyz_ram_after = get_ram_bytes(xyz_name);
         auto user_ram_after = get_ram_bytes(swapram1);
+
+        std::cout << "testdata: " << get_account_ram(xyz_name) << std::endl;
+        std::cout << "testdata2: " << get_account_ram(eos_name) << std::endl;
 
         // console out ram
         std::cout << "user_ram_before: " << user_ram_before << std::endl;

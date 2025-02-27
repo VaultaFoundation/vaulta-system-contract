@@ -725,6 +725,12 @@ public:
       return cpu;
    };
 
+   auto get_account_ram(const account_name& a) {
+        int64_t ram_bytes = 0, net = 0, cpu = 0;
+        control->get_resource_limits_manager().get_account_limits(a, ram_bytes, net, cpu);
+        return ram_bytes;
+   }
+
    action_result deposit(const account_name& owner, const asset& amount) {
       return push_action(name(owner), "deposit"_n, mvo()("owner", owner)("amount", amount));
    }
