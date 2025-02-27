@@ -65,7 +65,7 @@ public:
    [[eosio::action]] void swapexcess(const name& account, const asset& eos_before);
 
    // ----------------------------------------------------
-   // SYSTEM [[eosio::action]] voidS -------------------------------------
+   // SYSTEM ACTIONS -------------------------------------
    // ----------------------------------------------------
    // The following actions are all inline actions to the system contract
    // that are forwarded from this contract. They are all wrapped in a swap
