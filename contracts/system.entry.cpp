@@ -304,9 +304,20 @@ class [[eosio::contract("system")]] system_contract : public contract {
             check(quantity.symbol == get_token_symbol(), "Wrong token used");
             check(quantity.amount > 0, "Swap before amount must be greater than 0");
 
+            action(
+                permission_level{get_self(), "active"_n},
+                get_self(),
+                "swaptrace"_n,
+                std::make_tuple(account, quantity)
+            ).send();
+
             sub_balance(account, quantity);
             add_balance(get_self(), quantity, get_self());
             credit_eos_to(account, quantity);
+        }
+
+        ACTION swaptrace(const name& account, const asset& quantity){
+            require_auth(get_self());
         }
 
         // Allows users to get back XYZ tokens from actions that give them EOS tokens
