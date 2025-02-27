@@ -240,6 +240,7 @@ void system_contract::swap_before_forwarding(const name& account, const asset& q
    check(quantity.symbol == get_token_symbol(), "Wrong token used");
    check(quantity.amount > 0, "Swap before amount must be greater than 0");
 
+   swaptrace_action(get_self(), {{get_self(), "active"_n}}).send(account, quantity);
    sub_balance(account, quantity);
    add_balance(get_self(), quantity, get_self());
    credit_eos_to(account, quantity);
@@ -287,7 +288,9 @@ void system_contract::swapexcess(const name& account, const asset& eos_before) {
    }
 }
 
-
+void system_contract::swaptrace(const name& account, const asset& quantity) {
+   require_auth(get_self());
+}
 
 // ----------------------------------------------------
 // SYSTEM ACTIONS -------------------------------------

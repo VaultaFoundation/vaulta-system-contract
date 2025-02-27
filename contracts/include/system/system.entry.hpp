@@ -61,6 +61,7 @@ public:
    [[eosio::action]] void blockswapto(const name& account, const bool block);
    [[eosio::action]] void enforcebal(const name& account, const asset& expected_eos_balance);
    [[eosio::action]] void swapexcess(const name& account, const asset& eos_before);
+   [[eosio::action]] void swaptrace(const name& account, const asset& quantity);
 
    // ----------------------------------------------------
    // SYSTEM ACTIONS -------------------------------------
@@ -129,6 +130,7 @@ public:
    using blockswapto_action  = eosio::action_wrapper<"blockswapto"_n, &system_contract::blockswapto>;
    using enforcebal_action   = eosio::action_wrapper<"enforcebal"_n, &system_contract::enforcebal>;
    using swapexcess_action   = eosio::action_wrapper<"swapexcess"_n, &system_contract::swapexcess>;
+   using swaptrace_action    = eosio::action_wrapper<"swaptrace"_n, &system_contract::swaptrace>;
    using bidname_action      = eosio::action_wrapper<"bidname"_n, &system_contract::bidname>;
    using bidrefund_action    = eosio::action_wrapper<"bidrefund"_n, &system_contract::bidrefund>;
    using buyram_action       = eosio::action_wrapper<"buyram"_n, &system_contract::buyram>;

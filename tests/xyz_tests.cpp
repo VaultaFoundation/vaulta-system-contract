@@ -979,6 +979,7 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
                 ("vmtype",     0)
                 ("vmversion",  0)
                 ("code",       code )
+                ("memo",       "")
             ),
             missing_auth_exception,
             fc_exception_message_is("missing authority of contractest")
@@ -989,12 +990,14 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
             ("vmtype",     0)
             ("vmversion",  0)
             ("code",       code )
+            ("memo",       "")
         );
 
         BOOST_REQUIRE_EXCEPTION(
             base_tester::push_action( xyz_name, "setabi"_n, user, mutable_variant_object()
                 ("account",    contract_account)
                 ("abi",        eos_contracts::token_abi() )
+                ("memo",       "")
             ),
             missing_auth_exception,
             fc_exception_message_is("missing authority of contractest")
@@ -1003,6 +1006,7 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
         base_tester::push_action( xyz_name, "setabi"_n, contract_account, mutable_variant_object()
             ("account",    contract_account)
             ("abi",        eos_contracts::token_abi() )
+            ("memo",       "")
         );
 
     }
