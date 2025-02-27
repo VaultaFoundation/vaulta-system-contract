@@ -153,9 +153,7 @@ void system_contract::on_transfer(const name& from, const name& to, const asset&
 
    check(quantity.symbol == EOS, "Invalid symbol");
    asset swap_amount = asset(quantity.amount, get_token_symbol());
-   action(permission_level{get_self(), "active"_n}, get_self(), "transfer"_n,
-          std::make_tuple(get_self(), from, swap_amount, std::string("")))
-      .send();
+   transfer_action(get_self(), {{get_self(), "active"_n}}).send(get_self(), from, swap_amount, std::string(""));
 }
 
 // Allows an account to block themselves from being a recipient of the `swapto` action.
@@ -190,24 +188,16 @@ void system_contract::swapto(const name& from, const name& to, const asset& quan
 
    if (quantity.symbol == EOS) {
       // First swap the EOS to XYZ and credit it to the user
-      action(permission_level{from, "active"_n}, "eosio.token"_n, "transfer"_n,
-             std::make_tuple(from, get_self(), asset(quantity.amount, EOS), memo))
-         .send();
+      transfer_action("eosio.token"_n, {{from, "active"_n}}).send(from, get_self(), asset(quantity.amount, EOS), memo);
 
       // Then transfer the swapped XYZ to the target account
-      action(permission_level{from, "active"_n}, get_self(), "transfer"_n,
-             std::make_tuple(from, to, asset(quantity.amount, get_token_symbol()), memo))
-         .send();
+      transfer_action(get_self(), {{from, "active"_n}}).send(from, to, asset(quantity.amount, get_token_symbol()), memo);
    } else if (quantity.symbol == get_token_symbol()) {
       // First swap the XYZ to EOS and credit it to the user
-      action(permission_level{from, "active"_n}, get_self(), "transfer"_n,
-             std::make_tuple(from, get_self(), asset(quantity.amount, get_token_symbol()), memo))
-         .send();
+      transfer_action(get_self(), {{from, "active"_n}}).send(from, get_self(), asset(quantity.amount, get_token_symbol()), memo);
 
       // Then transfer the swapped EOS to the target account
-      action(permission_level{from, "active"_n}, "eosio.token"_n, "transfer"_n,
-             std::make_tuple(from, to, asset(quantity.amount, EOS), memo))
-         .send();
+      transfer_action("eosio.token"_n, {{from, "active"_n}}).send(from, to, asset(quantity.amount, EOS), memo);
    } else {
       check(false, "Invalid symbol");
    }
@@ -239,9 +229,7 @@ void system_contract::credit_eos_to(const name& account, const asset& quantity) 
    check(quantity.amount > 0, "Credit amount must be greater than 0");
 
    asset swap_amount = asset(quantity.amount, EOS);
-   action(permission_level{get_self(), "active"_n}, "eosio.token"_n, "transfer"_n,
-          std::make_tuple(get_self(), account, swap_amount, std::string("")))
-      .send();
+   transfer_action("eosio.token"_n, {{get_self(), "active"_n}}).send(get_self(), account, swap_amount, std::string(""));
 }
 
 // Allows users to use XYZ tokens to perform actions on the system contract
@@ -261,9 +249,7 @@ void system_contract::swap_after_forwarding(const name& account, const asset& qu
    asset swap_amount = asset(quantity.amount, EOS);
    check(swap_amount.amount > 0, "Swap after amount must be greater than 0");
 
-   action(permission_level{account, "active"_n}, "eosio.token"_n, "transfer"_n,
-          std::make_tuple(account, get_self(), swap_amount, std::string("")))
-      .send();
+   transfer_action("eosio.token"_n, {{account, "active"_n}}).send(account, get_self(), swap_amount, std::string(""));
 }
 
 // Gets a given account's balance of EOS
