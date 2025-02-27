@@ -8,8 +8,41 @@
 #include <sstream>
 #include <fc/log/logger.hpp>
 #include <eosio/chain/exceptions.hpp>
+#include "contracts.hpp"
 
 #include "eosio.system_tester.hpp"
+
+std::vector<char> prepare_wasm(const std::vector<uint8_t>& uint8_vector) {
+    std::vector<char> char_vector(uint8_vector.size());
+    std::copy(uint8_vector.begin(), uint8_vector.end(), char_vector.begin());
+    return char_vector;
+}
+
+inline constexpr int64_t powerup_frac  = 1'000'000'000'000'000ll; // 1.0 = 10^15
+inline constexpr int64_t stake_weight = 100'000'000'0000ll; // 10^12
+
+struct powerup_config_resource {
+   std::optional<int64_t>        current_weight_ratio = {};
+   std::optional<int64_t>        target_weight_ratio  = {};
+   std::optional<int64_t>        assumed_stake_weight = {};
+   std::optional<time_point_sec> target_timestamp     = {};
+   std::optional<double>         exponent             = {};
+   std::optional<uint32_t>       decay_secs           = {};
+   std::optional<asset>          min_price            = {};
+   std::optional<asset>          max_price            = {};
+};
+FC_REFLECT(powerup_config_resource,                                                             //
+           (current_weight_ratio)(target_weight_ratio)(assumed_stake_weight)(target_timestamp) //
+           (exponent)(decay_secs)(min_price)(max_price))
+
+struct powerup_config {
+   powerup_config_resource net             = {};
+   powerup_config_resource cpu             = {};
+   std::optional<uint32_t> powerup_days    = {};
+   std::optional<asset>    min_powerup_fee = {};
+};
+FC_REFLECT(powerup_config, (net)(cpu)(powerup_days)(min_powerup_fee))
+
 
 using namespace eosio_system;
 
@@ -342,11 +375,12 @@ const account_name user = "user"_n;
 const account_name user2 = "user2"_n;
 const account_name user3 = "user3"_n;
 const account_name exchange = "exchange"_n;
+const account_name powerupuser = "powuser"_n;
 
 BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
 
-    const std::vector<account_name> accounts = { issuer, swapper, hacker, user, user2, user3, exchange };
+    const std::vector<account_name> accounts = { issuer, swapper, hacker, user, user2, user3, exchange, powerupuser, "eosio.reserv"_n };
     create_accounts_with_resources( accounts );
     produce_block();
 
@@ -494,16 +528,40 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
         );
     }
 
-
+    // can not swapto with tokens you do not own
+    {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "swapto"_n, user, mutable_variant_object()
+                ("from",    user2)
+                ("to",      exchange )
+                ("quantity", eos("1.0000"))
+                ("memo", "")
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user2")
+        );
+    }
 
 
     // swap some EOS to XYZ
     transfer(user, xyz_name, eos("50.0000"), user);
     transfer(user2, xyz_name, eos("50.0000"), user2);
     transfer(user3, xyz_name, eos("50.0000"), user3);
+    transfer(eos_name, powerupuser, eos("100000.0000"));
+    transfer(powerupuser, xyz_name, eos("100000.0000"), powerupuser);
 
     // Should be able to automatically swap tokens and use system contracts
     {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "bidname"_n, user2, mutable_variant_object()
+                ("bidder",    user)
+                ("newname",   "newname")
+                ("bid",       xyz("1.0000"))
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
         auto old_balance = get_xyz_balance(user);
         base_tester::push_action( xyz_name, "bidname"_n, user, mutable_variant_object()
             ("bidder",    user)
@@ -516,6 +574,16 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
     // Should be able to bidrefund
     {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "bidname"_n, user, mutable_variant_object()
+                ("bidder",    user2)
+                ("newname",   "newname")
+                ("bid",       xyz("1.5000"))
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user2")
+        );
+
         auto old_balance = get_xyz_balance(user);
         base_tester::push_action( xyz_name, "bidname"_n, user2, mutable_variant_object()
             ("bidder",    user2)
@@ -524,6 +592,15 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
         );
 
         BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance);
+
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "bidrefund"_n, user2, mutable_variant_object()
+                ("bidder",    user)
+                ("newname",   "newname")
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
 
         base_tester::push_action( xyz_name, "bidrefund"_n, user, mutable_variant_object()
             ("bidder",    user)
@@ -535,6 +612,16 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
     // Should be able to buyram
     {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "buyram"_n, user2, mutable_variant_object()
+                ("payer",    user)
+                ("receiver", user)
+                ("quant", xyz("1.0000"))
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
         auto old_balance = get_xyz_balance(user);
         base_tester::push_action( xyz_name, "buyram"_n, user, mutable_variant_object()
             ("payer",    user)
@@ -547,6 +634,15 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
     // Should be able to buyramself
     {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "buyramself"_n, user2, mutable_variant_object()
+                ("payer",    user)
+                ("quant", xyz("1.0000"))
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
         auto old_balance = get_xyz_balance(user);
         base_tester::push_action( xyz_name, "buyramself"_n, user, mutable_variant_object()
             ("payer",    user)
@@ -558,6 +654,16 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
     // Should be able to buyramburn
     {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "buyramburn"_n, user2, mutable_variant_object()
+                ("payer",    user)
+                ("quantity", xyz("1.0000"))
+                ("memo", std::string("memo"))
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
         auto old_balance = get_xyz_balance(user);
         base_tester::push_action( xyz_name, "buyramburn"_n, user, mutable_variant_object()
             ("payer",    user)
@@ -570,6 +676,16 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
     // Should be able to buyrambytes
     {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "buyrambytes"_n, user2, mutable_variant_object()
+                ("payer",    user)
+                ("receiver", user)
+                ("bytes", 1024)
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
         auto old_balance = get_xyz_balance(user);
         base_tester::push_action( xyz_name, "buyrambytes"_n, user, mutable_variant_object()
             ("payer",    user)
@@ -582,6 +698,16 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
     // Should be able to burnram
     {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "ramburn"_n, user2, mutable_variant_object()
+                ("owner",    user)
+                ("bytes", 10)
+                ("memo", "memo")
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
         base_tester::push_action( xyz_name, "ramburn"_n, user, mutable_variant_object()
             ("owner",    user)
             ("bytes", 10)
@@ -591,6 +717,15 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
     // Should be able to sellram
     {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "sellram"_n, user2, mutable_variant_object()
+                ("account",    user)
+                ("bytes", 1024)
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
         auto old_balance = get_xyz_balance(user);
         auto old_balance_eos = get_balance(user);
         base_tester::push_action( xyz_name, "sellram"_n, user, mutable_variant_object()
@@ -602,8 +737,81 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
         BOOST_REQUIRE_EQUAL(get_xyz_balance(user) > old_balance, true);
     }
 
+    // should be able to giftram
+    {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "giftram"_n, user2, mutable_variant_object()
+                ("from",    user)
+                ("receiver",    user2)
+                ("ram_bytes", 10)
+                ("memo", "")
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
+        auto bytes_from_before = get_ram_bytes(user);
+        auto bytes_receiver_before = get_ram_bytes(user2);
+        auto old_balance = get_xyz_balance(user);
+        base_tester::push_action( xyz_name, "giftram"_n, user, mutable_variant_object()
+            ("from",    user)
+            ("receiver",    user2)
+            ("ram_bytes", 10)
+            ("memo", "")
+        );
+
+        auto bytes_from_after = get_ram_bytes(user);
+        auto bytes_receiver_after = get_ram_bytes(user2);
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance);
+
+        BOOST_REQUIRE_EQUAL(bytes_from_after, bytes_from_before - 10);
+        BOOST_REQUIRE_EQUAL(bytes_receiver_after, bytes_receiver_before + 10);
+    }
+
+    // ungiftram
+    {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "ungiftram"_n, user, mutable_variant_object()
+                ("from",    user2)
+                ("to",    user)
+                ("memo", "")
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user2")
+        );
+
+        auto bytes_from_before = get_ram_bytes(user);
+        auto bytes_receiver_before = get_ram_bytes(user2);
+        auto old_balance = get_xyz_balance(user);
+
+        base_tester::push_action( xyz_name, "ungiftram"_n, user2, mutable_variant_object()
+            ("from",    user2)
+            ("to",    user)
+            ("memo", "")
+        );
+
+        auto bytes_from_after = get_ram_bytes(user);
+        auto bytes_receiver_after = get_ram_bytes(user2);
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance);
+
+        BOOST_REQUIRE_EQUAL(bytes_from_after, bytes_from_before + 10);
+        BOOST_REQUIRE_EQUAL(bytes_receiver_after, bytes_receiver_before - 10);
+
+    }
+
     // should be able to stake to rex
     {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "deposit"_n, user2, mutable_variant_object()
+                ("owner",    user)
+                ("amount", xyz("1.0000"))
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
         auto old_balance = get_xyz_balance(user);
         base_tester::push_action( xyz_name, "deposit"_n, user, mutable_variant_object()
             ("owner",    user)
@@ -614,6 +822,15 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
         auto rex_fund = get_rex_fund(user);
         BOOST_REQUIRE_EQUAL(rex_fund, eos("1.0000"));
+
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "buyrex"_n, user2, mutable_variant_object()
+                ("from",    user)
+                ("amount", xyz("1.0000"))
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
 
         base_tester::push_action( xyz_name, "buyrex"_n, user, mutable_variant_object()
             ("from",    user)
@@ -626,6 +843,15 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
     // should be able to unstake from rex
     {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "mvfrsavings"_n, user2, mutable_variant_object()
+                ("owner",    user)
+                ("rex", rex(10000'0000))
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
         base_tester::push_action( "eosio"_n, "mvtosavings"_n, user, mutable_variant_object()
             ("owner",    user)
             ("rex", rex(10000'0000))
@@ -638,6 +864,15 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
         produce_block();
         produce_block( fc::days(30) );
 
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "sellrex"_n, user2, mutable_variant_object()
+                ("from",    user)
+                ("rex", rex(10000'0000))
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
         // sell rex
         base_tester::push_action( xyz_name, "sellrex"_n, user, mutable_variant_object()
             ("from",    user)
@@ -647,6 +882,15 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
     // should be able to withdraw
     {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "withdraw"_n, user2, mutable_variant_object()
+                ("owner",    user)
+                ("amount", xyz("1.0000"))
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
         auto old_balance = get_xyz_balance(user);
         base_tester::push_action( xyz_name, "withdraw"_n, user, mutable_variant_object()
             ("owner",    user)
@@ -657,30 +901,78 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
     }
 
 
+    // should be able to donate to rex
+    {
+        // need to buy back in, as rex is no longer initialized
+        {
+            base_tester::push_action( xyz_name, "deposit"_n, user, mutable_variant_object()
+                ("owner",    user)
+                ("amount", xyz("1.0000"))
+            );
+
+            base_tester::push_action( xyz_name, "buyrex"_n, user, mutable_variant_object()
+                ("from",    user)
+                ("amount", xyz("1.0000"))
+            );
+        }
+
+        auto old_balance = get_xyz_balance(user);
+        base_tester::push_action( xyz_name, "donatetorex"_n, user, mutable_variant_object()
+            ("payer",    user)
+            ("quantity", xyz("1.0000"))
+            ("memo", "")
+        );
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance - xyz("1.0000"));
+
+        // cannot donate with EOS
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "donatetorex"_n, user, mutable_variant_object()
+                ("payer",    user)
+                ("quantity", eos("1.0000"))
+                ("memo", "")
+            ),
+            eosio_assert_message_exception,
+            eosio_assert_message_is("Wrong token used")
+        );
+
+        // cannot donate with wrong account
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "donatetorex"_n, user, mutable_variant_object()
+                ("payer",    user2)
+                ("quantity", xyz("1.0000"))
+                ("memo", "")
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user2")
+
+        );
+    }
+
+
+
+
     transfer(eos_name, user, eos("100000.0000"));
     transfer(user, xyz_name, eos("100000.0000"), user);
-    active_and_vote_producers();
+    vector<name> producers = active_and_vote_producers();
 
-    // should be able to powerup and get overages back in XYZ
-    // TODO: Powerup isn't initialized
-//     {
-//         auto old_balance = get_xyz_balance(user);
-//         base_tester::push_action( xyz_name, "powerup"_n, user, mutable_variant_object()
-//             ("payer",    user)
-//             ("receiver", user)
-//             ("days", 30)
-//             ("net_frac", 1)
-//             ("cpu_frac", 1)
-//             ("max_payment", xyz("1.0000"))
-//         );
-//
-//         BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance - xyz("1.0000"));
-//     }
+
 
     // should be able to delegate and undelegate bw
     {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "delegatebw"_n, user2, mutable_variant_object()
+                ("from",    user)
+                ("receiver", user)
+                ("stake_net_quantity", xyz("1.0000"))
+                ("stake_cpu_quantity", xyz("100000.0000"))
+                ("transfer", false)
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
         auto old_balance = get_xyz_balance(user) - xyz("100000.0000");
-        std::cout << "old_balance: " << old_balance << std::endl;
         base_tester::push_action( xyz_name, "delegatebw"_n, user, mutable_variant_object()
             ("from",    user)
             ("receiver", user)
@@ -690,6 +982,17 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
         );
 
         BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance - xyz("1.0000"));
+
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "undelegatebw"_n, user2, mutable_variant_object()
+                ("from",    user)
+                ("receiver", user)
+                ("unstake_net_quantity", xyz("0.0000"))
+                ("unstake_cpu_quantity", xyz("1.0000"))
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
 
         base_tester::push_action( xyz_name, "undelegatebw"_n, user, mutable_variant_object()
             ("from",    user)
@@ -707,6 +1010,273 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
         BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance);
 
+    }
+
+    // should be able to unstaketorex
+    {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "unstaketorex"_n, user2, mutable_variant_object()
+                ("owner",    user)
+                ("receiver", user)
+                ("from_net", xyz("0.0000"))
+                ("from_cpu", xyz("1.0000"))
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
+        base_tester::push_action( xyz_name, "unstaketorex"_n, user, mutable_variant_object()
+            ("owner",    user)
+            ("receiver", user)
+            ("from_net", xyz("0.0000"))
+            ("from_cpu", xyz("1.0000"))
+        );
+    }
+
+    // claimrewards
+    {
+        auto producer = producers[0];
+        auto old_balance = get_xyz_balance(producer);
+        base_tester::push_action( xyz_name, "claimrewards"_n, producer, mutable_variant_object()
+            ("owner",    producer)
+        );
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(producer) > old_balance, true);
+
+        // should not be able to claimrewards for another account
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "claimrewards"_n, user, mutable_variant_object()
+                ("owner",    producer)
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of defproducera")
+        );
+    }
+
+    // linkauth
+    {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "linkauth"_n, user2, mutable_variant_object()
+                ("account",    user)
+                ("code",       xyz_name)
+                ("type",       "transfer"_n)
+                ("requirement", "active"_n)
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
+        base_tester::push_action( xyz_name, "linkauth"_n, user, mutable_variant_object()
+            ("account",    user)
+            ("code",       xyz_name)
+            ("type",       "transfer"_n)
+            ("requirement", "active"_n)
+        );
+    }
+
+    // unlinkauth
+    {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "unlinkauth"_n, user2, mutable_variant_object()
+                ("account",    user)
+                ("code",       xyz_name)
+                ("type",       "transfer"_n)
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
+        base_tester::push_action( xyz_name, "unlinkauth"_n, user, mutable_variant_object()
+            ("account",    user)
+            ("code",       xyz_name)
+            ("type",       "transfer"_n)
+        );
+    }
+
+    // updateauth and deleteauth
+    {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "updateauth"_n, user2, mutable_variant_object()
+                ("account",    user)
+                ("permission", "test"_n)
+                ("parent",     "active"_n)
+                ("auth",       authority(1, {key_weight{get_public_key(user, "active"), 1}}))
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
+        base_tester::push_action( xyz_name, "updateauth"_n, user, mutable_variant_object()
+            ("account",    user)
+            ("permission", "test"_n)
+            ("parent",     "active"_n)
+            ("auth",       authority(1, {key_weight{get_public_key(user, "active"), 1}}))
+        );
+
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "deleteauth"_n, user2, mutable_variant_object()
+                ("account",    user)
+                ("permission", "test"_n)
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
+        base_tester::push_action( xyz_name, "deleteauth"_n, user, mutable_variant_object()
+            ("account",    user)
+            ("permission", "test"_n)
+        );
+    }
+
+    // setcode and setabi
+    {
+        // create contract account
+        name contract_account = "contractest"_n;
+        create_accounts_with_resources( { contract_account } );
+
+        // get some CPU and NET with delegatebw
+        base_tester::push_action( eos_name, "delegatebw"_n, eos_name, mutable_variant_object()
+            ("from",    eos_name)
+            ("receiver", contract_account)
+            ("stake_net_quantity", eos("10.0000"))
+            ("stake_cpu_quantity", eos("500.0000"))
+            ("transfer", false)
+        );
+
+        base_tester::push_action( eos_name, "buyram"_n, eos_name, mutable_variant_object()
+            ("payer",    eos_name)
+            ("receiver", contract_account)
+            ("quant", eos("1000000.0000"))
+        );
+
+        auto code = prepare_wasm(eos_contracts::fees_wasm());
+
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "setcode"_n, user, mutable_variant_object()
+                ("account",    contract_account)
+                ("vmtype",     0)
+                ("vmversion",  0)
+                ("code",       code )
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of contractest")
+        );
+
+        base_tester::push_action( xyz_name, "setcode"_n, contract_account, mutable_variant_object()
+            ("account",    contract_account)
+            ("vmtype",     0)
+            ("vmversion",  0)
+            ("code",       code )
+        );
+
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "setabi"_n, user, mutable_variant_object()
+                ("account",    contract_account)
+                ("abi",        eos_contracts::token_abi() )
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of contractest")
+        );
+
+        base_tester::push_action( xyz_name, "setabi"_n, contract_account, mutable_variant_object()
+            ("account",    contract_account)
+            ("abi",        eos_contracts::token_abi() )
+        );
+
+    }
+
+    // voteproducer
+    {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "voteproducer"_n, user2, mutable_variant_object()
+                ("voter",    user)
+                ("proxy",    ""_n)
+                ("producers", std::vector<name>{producers[0]})
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
+        base_tester::push_action( xyz_name, "voteproducer"_n, user, mutable_variant_object()
+            ("voter",    user)
+            ("proxy",    ""_n)
+            ("producers", std::vector<name>{producers[0]})
+        );
+    }
+
+    // voteupdate
+    {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "voteupdate"_n, user2, mutable_variant_object()
+                ("voter_name",    user)
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
+        base_tester::push_action( xyz_name, "voteupdate"_n, user, mutable_variant_object()
+            ("voter_name",    user)
+        );
+    }
+
+
+    // should be able to powerup and get overages back in XYZ
+    {
+        // configure powerup
+        {
+            powerup_config config;
+
+            config.net.current_weight_ratio = powerup_frac / 4;
+            config.net.target_weight_ratio  = powerup_frac / 100;
+            config.net.assumed_stake_weight = stake_weight;
+            config.net.target_timestamp     = time_point_sec(get_pending_block_time() + fc::days(100));
+            config.net.exponent             = 2;
+            config.net.decay_secs           = fc::days(1).to_seconds();
+            config.net.min_price            = asset::from_string("0.0000 EOS");
+            config.net.max_price            = asset::from_string("1000000.0000 EOS");
+
+            config.cpu.current_weight_ratio = powerup_frac / 4;
+            config.cpu.target_weight_ratio  = powerup_frac / 100;
+            config.cpu.assumed_stake_weight = stake_weight;
+            config.cpu.target_timestamp     = time_point_sec(get_pending_block_time() + fc::days(100));
+            config.cpu.exponent             = 2;
+            config.cpu.decay_secs           = fc::days(1).to_seconds();
+            config.cpu.min_price            = asset::from_string("0.0000 EOS");
+            config.cpu.max_price            = asset::from_string("1000000.0000 EOS");
+
+            config.powerup_days    = 30;
+            config.min_powerup_fee = asset::from_string("1.0000 EOS");
+
+            base_tester::push_action(eos_name, "cfgpowerup"_n, eos_name, mvo()("args", config));
+        }
+
+        auto old_balance = get_xyz_balance(powerupuser);
+
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "powerup"_n, user, mutable_variant_object()
+                ("payer",    powerupuser)
+                ("receiver", powerupuser)
+                ("days", 30)
+                ("net_frac", powerup_frac/4)
+                ("cpu_frac", powerup_frac/4)
+                ("max_payment", xyz("100000.0000"))
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of powuser")
+        );
+
+        // 62500.0000 EOS is fee
+        base_tester::push_action( xyz_name, "powerup"_n, powerupuser, mutable_variant_object()
+            ("payer",    powerupuser)
+            ("receiver", powerupuser)
+            ("days", 30)
+            ("net_frac", powerup_frac/4)
+            ("cpu_frac", powerup_frac/4)
+            ("max_payment", xyz("100000.0000"))
+        );
+
+        // new balance should be old balance - 62500.0000 EOS
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(powerupuser), old_balance - xyz("62500.0000"));
     }
 
 

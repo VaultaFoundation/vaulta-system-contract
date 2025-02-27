@@ -24,7 +24,7 @@ public:
    // -----------------
    // static utilities
    // -----------------
-   static constexpr account_name xyz_name = "eosio.xyz"_n;
+   static constexpr account_name xyz_name = "xyz"_n;
    static constexpr account_name eos_name = "eosio"_n;
 
    static asset eos(const char* amount) { return core_sym::from_string(amount); }
@@ -1014,6 +1014,10 @@ public:
       return data.empty() ? fc::variant()
                           : abi_ser.binary_to_variant("rex_order", data,
                                                       abi_serializer::create_yield_function(abi_serializer_max_time));
+   }
+
+   auto get_pending_block_time() {
+      return control->pending_block_time();
    }
 
    fc::variant get_rex_pool() const {

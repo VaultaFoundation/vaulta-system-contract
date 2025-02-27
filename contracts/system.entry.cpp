@@ -4,6 +4,7 @@
 #include <eosio/singleton.hpp>
 #include <system/token.hpp>
 #include <system/oldsystem.hpp>
+#include <eosio/binary_extension.hpp>
 using namespace eosio;
 using namespace system_token;
 using namespace system_origin;
@@ -278,6 +279,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
             return cfg.token_symbol;
         }
 
+        // Enforces that the given asset has the right token symbol (XYZ)
         void enforce_symbol(const asset& quantity){
             check(quantity.symbol == get_token_symbol(), "Wrong token used");
         }
@@ -412,7 +414,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 permission_level{payer, "active"_n},
                 "eosio"_n,
                 "buyramburn"_n,
-                std::make_tuple(payer, asset(quantity.amount, EOS), memo)
+                std::make_tuple(payer, asset(quantity.amount, EOS), std::cref(memo))
             ).send();
         }
 
@@ -466,7 +468,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 permission_level{owner, "active"_n},
                 "eosio"_n,
                 "ramburn"_n,
-                std::make_tuple(owner, bytes, memo)
+                std::make_tuple(owner, bytes, std::cref(memo))
             ).send();
         }
 
@@ -476,7 +478,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 permission_level{from, "active"_n},
                 "eosio"_n,
                 "ramtransfer"_n,
-                std::make_tuple(from, to, bytes, memo)
+                std::make_tuple(from, to, bytes, std::cref(memo))
             ).send();
         }
 
@@ -572,7 +574,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 permission_level{creator, "active"_n},
                 "eosio"_n,
                 "newaccount"_n,
-                std::make_tuple(creator, account_name, owner, active)
+                std::make_tuple(creator, account_name, std::cref(owner), std::cref(active))
             ).send();
         }
 
@@ -661,7 +663,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 permission_level{voter, "active"_n},
                 "eosio"_n,
                 "voteproducer"_n,
-                std::make_tuple(voter, proxy, producers)
+                std::make_tuple(voter, proxy, std::cref(producers))
             ).send();
         }
 
@@ -710,6 +712,147 @@ class [[eosio::contract("system")]] system_contract : public contract {
                 std::make_tuple(owner, eos_balance)
             ).send();
         }
+
+        ACTION claimrewards(const name owner){
+            require_auth(owner);
+            auto eos_balance = get_eos_balance(owner);
+            action(
+                permission_level{owner, "active"_n},
+                "eosio"_n,
+                "claimrewards"_n,
+                std::make_tuple(owner)
+            ).send();
+
+            action(
+                permission_level{get_self(), "active"_n},
+                get_self(),
+                "swapexcess"_n,
+                std::make_tuple(owner, eos_balance)
+            ).send();
+        }
+
+        ACTION linkauth(
+            name                   account,
+            name                   code,
+            name                   type,
+            name                   requirement,
+            binary_extension<name> authorized_by
+        ){
+            require_auth(account);
+            action(
+                permission_level{account, "active"_n},
+                "eosio"_n,
+                "linkauth"_n,
+                std::make_tuple(account, code, type, requirement, authorized_by)
+            ).send();
+        }
+
+        ACTION unlinkauth(
+            name                   account,
+            name                   code,
+            name                   type,
+            binary_extension<name> authorized_by
+        ){
+            require_auth(account);
+            action(
+                permission_level{account, "active"_n},
+                "eosio"_n,
+                "unlinkauth"_n,
+                std::make_tuple(account, code, type, authorized_by)
+            ).send();
+        }
+
+        ACTION updateauth(
+            name                   account,
+            name                   permission,
+            name                   parent,
+            authority              auth,
+            binary_extension<name> authorized_by
+        ){
+            require_auth(account);
+            action(
+                permission_level{account, "active"_n},
+                "eosio"_n,
+                "updateauth"_n,
+                std::make_tuple(account, permission, parent, std::cref(auth), authorized_by)
+            ).send();
+        }
+
+        ACTION deleteauth(
+            name account,
+            name permission,
+            binary_extension<name> authorized_by
+        ){
+            require_auth(account);
+            action(
+                permission_level{account, "active"_n},
+                "eosio"_n,
+                "deleteauth"_n,
+                std::make_tuple(account, permission, authorized_by)
+            ).send();
+        }
+
+        ACTION setabi(
+            const name& account,
+            const std::vector<char>& abi,
+            const binary_extension<std::string>& memo
+        ){
+            require_auth(account);
+            action(
+                permission_level{account, "active"_n},
+                "eosio"_n,
+                "setabi"_n,
+                std::make_tuple(account, std::cref(abi), std::cref(memo))
+            ).send();
+        }
+
+        ACTION setcode(
+            const name& account,
+            uint8_t vmtype,
+            uint8_t vmversion,
+            const std::vector<char>& code,
+            const binary_extension<std::string>& memo
+        ){
+            require_auth(account);
+            action(
+                permission_level{account, "active"_n},
+                "eosio"_n,
+                "setcode"_n,
+                std::make_tuple(account, vmtype, vmversion, std::cref(code), std::cref(memo))
+            ).send();
+        }
+
+        ACTION donatetorex( const name& payer, const asset& quantity, const std::string& memo ){
+            require_auth(payer);
+            swap_before_forwarding(payer, quantity);
+            action(
+                permission_level{payer, "active"_n},
+                "eosio"_n,
+                "donatetorex"_n,
+                std::make_tuple(payer, asset(quantity.amount, EOS), std::cref(memo))
+            ).send();
+        }
+
+        ACTION giftram( const name& from, const name& receiver, const int64_t& ram_bytes, const std::string& memo ){
+            require_auth(from);
+            action(
+                permission_level{from, "active"_n},
+                "eosio"_n,
+                "giftram"_n,
+                std::make_tuple(from, receiver, ram_bytes, std::cref(memo))
+            ).send();
+        }
+
+        ACTION ungiftram( const name& from, const name& to, const std::string& memo ){
+            require_auth(from);
+            action(
+                permission_level{from, "active"_n},
+                "eosio"_n,
+                "ungiftram"_n,
+                std::make_tuple(from, to, std::cref(memo))
+            ).send();
+        }
+
 
         ACTION noop(std::string memo){}
 };
