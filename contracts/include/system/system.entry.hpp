@@ -13,8 +13,11 @@ struct authority;
 class [[eosio::contract("system")]] system_contract : public eosio::contract {
 public:
    using contract::contract;
+   using name   = eosio::name;
+   using asset  = eosio::asset;
+   using symbol = eosio::symbol;
 
-   TABLE config { eosio::symbol token_symbol; };
+   TABLE config { symbol token_symbol; };
 
    typedef eosio::singleton<"config"_n, config> config_table;
 
@@ -22,7 +25,7 @@ public:
    // This has been requested by exchanges who prefer to receive funds into their hot wallets
    // exclusively via the root `transfer` action.
    TABLE blocked_recipient {
-      eosio::name account;
+      name account;
 
       uint64_t primary_key() const {
          return account.value;
@@ -37,31 +40,29 @@ public:
     * swaps.
     * @param maximum_supply - The maximum supply of the token and the symbol of the new token.
     */
-   ACTION init(eosio::asset maximum_supply);
+   ACTION init(asset maximum_supply);
 
    // ----------------------------------------------------
    // SYSTEM TOKEN ---------------------------------------
    // ----------------------------------------------------
-   ACTION transfer(const eosio::name& from, const eosio::name& to, const eosio::asset& quantity,
-                   const std::string& memo);
-   ACTION open(const eosio::name& owner, const eosio::symbol& symbol, const eosio::name& ram_payer);
-   ACTION close(const eosio::name& owner, const eosio::symbol& symbol);
-   ACTION retire(const eosio::name& owner, const eosio::asset& quantity, const std::string& memo);
+   ACTION transfer(const name& from, const name& to, const asset& quantity, const std::string& memo);
+   ACTION open(const name& owner, const symbol& symbol, const name& ram_payer);
+   ACTION close(const name& owner, const symbol& symbol);
+   ACTION retire(const name& owner, const asset& quantity, const std::string& memo);
 
    // ----------------------------------------------------
    // SWAP -----------------------------------------------
    // ----------------------------------------------------
    // When this contract receives EOS tokens, it will swap them for XYZ tokens and credit them to the sender.
    [[eosio::on_notify("eosio.token::transfer")]]
-   void on_transfer(const eosio::name& from, const eosio::name& to, const eosio::asset& quantity,
-                    const std::string& memo);
+   void on_transfer(const name& from, const name& to, const asset& quantity, const std::string& memo);
 
    // This action allows exchanges to support "swap & withdraw" for their users and have the swapped tokens flow
    // to the users instead of to their own hot wallets.
-   ACTION swapto(const eosio::name& from, const eosio::name& to, const eosio::asset& quantity, const std::string& memo);
-   ACTION blockswapto(const eosio::name& account, const bool block);
-   ACTION enforcebal(const eosio::name& account, const eosio::asset& expected_eos_balance);
-   ACTION swapexcess(const eosio::name& account, const eosio::asset& eos_before);
+   ACTION swapto(const name& from, const name& to, const asset& quantity, const std::string& memo);
+   ACTION blockswapto(const name& account, const bool block);
+   ACTION enforcebal(const name& account, const asset& expected_eos_balance);
+   ACTION swapexcess(const name& account, const asset& eos_before);
 
    // ----------------------------------------------------
    // SYSTEM ACTIONS -------------------------------------
@@ -71,51 +72,46 @@ public:
    // before or after the action.
    // For details about what each action does, please see the base system contracts.
 
-   ACTION bidname(const eosio::name& bidder, const eosio::name& newname, const eosio::asset& bid);
-   ACTION bidrefund(const eosio::name& bidder, const eosio::name& newname);
-   ACTION buyram(const eosio::name& payer, const eosio::name& receiver, const eosio::asset& quant);
-   ACTION buyramburn(const eosio::name& payer, const eosio::asset& quantity, const std::string& memo);
-   ACTION buyrambytes(eosio::name payer, eosio::name receiver, uint32_t bytes);
-   ACTION buyramself(const eosio::name& payer, const eosio::asset& quant);
-   ACTION ramburn(const eosio::name& owner, const int64_t& bytes, const std::string& memo);
-   ACTION ramtransfer(const eosio::name& from, const eosio::name& to, const int64_t& bytes, const std::string& memo);
-   ACTION sellram(const eosio::name& account, const int64_t& bytes);
-   ACTION deposit(const eosio::name& owner, const eosio::asset& amount);
-   ACTION buyrex(const eosio::name& from, const eosio::asset& amount);
-   ACTION mvfrsavings(const eosio::name& owner, const eosio::asset& rex);
-   ACTION mvtosavings(const eosio::name& owner, const eosio::asset& rex);
-   ACTION sellrex(const eosio::name& from, const eosio::asset& rex);
-   ACTION withdraw(const eosio::name& owner, const eosio::asset& amount);
-   ACTION newaccount(const eosio::name& creator, const eosio::name& account_name, const system_origin::authority& owner,
+   ACTION bidname(const name& bidder, const name& newname, const asset& bid);
+   ACTION bidrefund(const name& bidder, const name& newname);
+   ACTION buyram(const name& payer, const name& receiver, const asset& quant);
+   ACTION buyramburn(const name& payer, const asset& quantity, const std::string& memo);
+   ACTION buyrambytes(name payer, name receiver, uint32_t bytes);
+   ACTION buyramself(const name& payer, const asset& quant);
+   ACTION ramburn(const name& owner, const int64_t& bytes, const std::string& memo);
+   ACTION ramtransfer(const name& from, const name& to, const int64_t& bytes, const std::string& memo);
+   ACTION sellram(const name& account, const int64_t& bytes);
+   ACTION deposit(const name& owner, const asset& amount);
+   ACTION buyrex(const name& from, const asset& amount);
+   ACTION mvfrsavings(const name& owner, const asset& rex);
+   ACTION mvtosavings(const name& owner, const asset& rex);
+   ACTION sellrex(const name& from, const asset& rex);
+   ACTION withdraw(const name& owner, const asset& amount);
+   ACTION newaccount(const name& creator, const name& account_name, const system_origin::authority& owner,
                      const system_origin::authority& active);
-   ACTION newaccount2(const eosio::name& creator, const eosio::name& account_name, eosio::public_key key);
-   ACTION powerup(const eosio::name& payer, const eosio::name& receiver, uint32_t days, int64_t net_frac,
-                  int64_t cpu_frac, const eosio::asset& max_payment);
-   ACTION delegatebw(const eosio::name& from, const eosio::name& receiver, const eosio::asset& stake_net_quantity,
-                     const eosio::asset& stake_cpu_quantity, const bool& transfer);
-   ACTION undelegatebw(const eosio::name& from, const eosio::name& receiver, const eosio::asset& unstake_net_quantity,
-                       const eosio::asset& unstake_cpu_quantity);
-   ACTION voteproducer(const eosio::name& voter, const eosio::name& proxy, const std::vector<eosio::name>& producers);
-   ACTION voteupdate(const eosio::name& voter_name);
-   ACTION unstaketorex(const eosio::name& owner, const eosio::name& receiver, const eosio::asset& from_net,
-                       const eosio::asset& from_cpu);
-   ACTION refund(const eosio::name& owner);
-   ACTION claimrewards(const eosio::name owner);
-   ACTION linkauth(eosio::name account, eosio::name code, eosio::name type, eosio::name requirement,
-                   eosio::binary_extension<eosio::name> authorized_by);
-   ACTION unlinkauth(eosio::name account, eosio::name code, eosio::name type,
-                     eosio::binary_extension<eosio::name> authorized_by);
-   ACTION updateauth(eosio::name account, eosio::name permission, eosio::name parent, system_origin::authority auth,
-                     eosio::binary_extension<eosio::name> authorized_by);
-   ACTION deleteauth(eosio::name account, eosio::name permission, eosio::binary_extension<eosio::name> authorized_by);
-   ACTION setabi(const eosio::name& account, const std::vector<char>& abi,
-                 const eosio::binary_extension<std::string>& memo);
-   ACTION setcode(const eosio::name& account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code,
+   ACTION newaccount2(const name& creator, const name& account_name, eosio::public_key key);
+   ACTION powerup(const name& payer, const name& receiver, uint32_t days, int64_t net_frac, int64_t cpu_frac,
+                  const asset& max_payment);
+   ACTION delegatebw(const name& from, const name& receiver, const asset& stake_net_quantity,
+                     const asset& stake_cpu_quantity, const bool& transfer);
+   ACTION undelegatebw(const name& from, const name& receiver, const asset& unstake_net_quantity,
+                       const asset& unstake_cpu_quantity);
+   ACTION voteproducer(const name& voter, const name& proxy, const std::vector<name>& producers);
+   ACTION voteupdate(const name& voter_name);
+   ACTION unstaketorex(const name& owner, const name& receiver, const asset& from_net, const asset& from_cpu);
+   ACTION refund(const name& owner);
+   ACTION claimrewards(const name owner);
+   ACTION linkauth(name account, name code, name type, name requirement, eosio::binary_extension<name> authorized_by);
+   ACTION unlinkauth(name account, name code, name type, eosio::binary_extension<name> authorized_by);
+   ACTION updateauth(name account, name permission, name parent, system_origin::authority auth,
+                     eosio::binary_extension<name> authorized_by);
+   ACTION deleteauth(name account, name permission, eosio::binary_extension<name> authorized_by);
+   ACTION setabi(const name& account, const std::vector<char>& abi, const eosio::binary_extension<std::string>& memo);
+   ACTION setcode(const name& account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code,
                   const eosio::binary_extension<std::string>& memo);
-   ACTION donatetorex(const eosio::name& payer, const eosio::asset& quantity, const std::string& memo);
-   ACTION giftram(const eosio::name& from, const eosio::name& receiver, const int64_t& ram_bytes,
-                  const std::string& memo);
-   ACTION ungiftram(const eosio::name& from, const eosio::name& to, const std::string& memo);
+   ACTION donatetorex(const name& payer, const asset& quantity, const std::string& memo);
+   ACTION giftram(const name& from, const name& receiver, const int64_t& ram_bytes, const std::string& memo);
+   ACTION ungiftram(const name& from, const name& to, const std::string& memo);
    ACTION noop(std::string memo);
 
 
@@ -168,12 +164,12 @@ public:
    using noop_action         = eosio::action_wrapper<"noop"_n, &system_contract::noop>;
 
 private:
-   void          add_balance(const eosio::name& owner, const eosio::asset& value, const eosio::name& ram_payer);
-   void          sub_balance(const eosio::name& owner, const eosio::asset& value);
-   eosio::symbol get_token_symbol();
-   void          enforce_symbol(const eosio::asset& quantity);
-   void          credit_eos_to(const eosio::name& account, const eosio::asset& quantity);
-   void          swap_before_forwarding(const eosio::name& account, const eosio::asset& quantity);
-   void          swap_after_forwarding(const eosio::name& account, const eosio::asset& quantity);
-   eosio::asset  get_eos_balance(const eosio::name& account);
+   void   add_balance(const name& owner, const asset& value, const name& ram_payer);
+   void   sub_balance(const name& owner, const asset& value);
+   symbol get_token_symbol();
+   void   enforce_symbol(const asset& quantity);
+   void   credit_eos_to(const name& account, const asset& quantity);
+   void   swap_before_forwarding(const name& account, const asset& quantity);
+   void   swap_after_forwarding(const name& account, const asset& quantity);
+   asset  get_eos_balance(const name& account);
 };
