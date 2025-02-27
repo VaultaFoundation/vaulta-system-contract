@@ -374,13 +374,18 @@ const account_name hacker = "hacker"_n;
 const account_name user = "user"_n;
 const account_name user2 = "user2"_n;
 const account_name user3 = "user3"_n;
+const account_name swapram1 = "swapram1"_n;
+const account_name swapram2 = "swapram2"_n;
 const account_name exchange = "exchange"_n;
 const account_name powerupuser = "powuser"_n;
 
 BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
 
-    const std::vector<account_name> accounts = { issuer, swapper, hacker, user, user2, user3, exchange, powerupuser, "eosio.reserv"_n };
+    const std::vector<account_name> accounts = {
+        issuer, swapper, hacker, user, user2, user3, exchange, powerupuser, swapram1, swapram2,
+        "eosio.reserv"_n
+    };
     create_accounts_with_resources( accounts );
     produce_block();
 
@@ -392,6 +397,8 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
     BOOST_REQUIRE_EQUAL(get_balance(user), eos("100.0000"));
     transfer(eos_name, user2,   eos("100.0000"));
     transfer(eos_name, user3,   eos("100.0000"));
+    transfer(eos_name, swapram1,   eos("100.0000"));
+    transfer(eos_name, swapram2,   eos("100.0000"));
 
     // check that we do start with 2.1B XYZ in XYZ's account (`init` action called in deploy_contract)
     // -----------------------------------------------------------------------------------------------
@@ -1217,6 +1224,59 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
         base_tester::push_action( xyz_name, "voteupdate"_n, user, mutable_variant_object()
             ("voter_name",    user)
         );
+    }
+
+
+
+    // should consume the contract's RAM when swapping from a new account using transfer
+    {
+        // buy ram for xyz account
+        {
+            base_tester::push_action( eos_name, "buyram"_n, eos_name, mutable_variant_object()
+                ("payer",    eos_name)
+                ("receiver", xyz_name)
+                ("quant", eos("2000000.0000"))
+            );
+        }
+        // stake some resources so that the accounts have a resource object to pull ram from
+        {
+            base_tester::push_action( eos_name, "delegatebw"_n, eos_name, mutable_variant_object()
+                ("from",    eos_name)
+                ("receiver", xyz_name)
+                ("stake_net_quantity", eos("10.0000"))
+                ("stake_cpu_quantity", eos("500.0000"))
+                ("transfer", false)
+            );
+            base_tester::push_action( eos_name, "delegatebw"_n, eos_name, mutable_variant_object()
+                ("from",    eos_name)
+                ("receiver", swapram1)
+                ("stake_net_quantity", eos("10.0000"))
+                ("stake_cpu_quantity", eos("500.0000"))
+                ("transfer", false)
+            );
+            base_tester::push_action( eos_name, "delegatebw"_n, eos_name, mutable_variant_object()
+                ("from",    eos_name)
+                ("receiver", swapram2)
+                ("stake_net_quantity", eos("10.0000"))
+                ("stake_cpu_quantity", eos("500.0000"))
+                ("transfer", false)
+            );
+        }
+
+        auto xyz_ram_before = get_ram_bytes(xyz_name);
+        auto user_ram_before = get_ram_bytes(swapram1);
+        transfer(swapram1, xyz_name, eos("100.0000"), swapram1);
+
+        auto xyz_ram_after = get_ram_bytes(xyz_name);
+        auto user_ram_after = get_ram_bytes(swapram1);
+
+        // console out ram
+        std::cout << "user_ram_before: " << user_ram_before << std::endl;
+        std::cout << "user_ram_after: " << user_ram_after << std::endl;
+        std::cout << "xyz_ram_before: " << xyz_ram_before << std::endl;
+        std::cout << "xyz_ram_after: " << xyz_ram_after << std::endl;
+
+        BOOST_REQUIRE_EQUAL(true, false);
     }
 
 
