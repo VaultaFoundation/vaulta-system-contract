@@ -1,5 +1,7 @@
 #include <system/system.entry.hpp>
 
+#include <system/token.hpp>
+#include <system/oldsystem.hpp>
 
 using namespace eosio;
 using namespace system_token;

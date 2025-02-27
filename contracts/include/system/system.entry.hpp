@@ -3,8 +3,6 @@
 #include <eosio/crypto.hpp>
 #include <eosio/singleton.hpp>
 #include <eosio/binary_extension.hpp>
-#include <system/token.hpp>
-#include <system/oldsystem.hpp>
 
 namespace system_origin {
 struct authority;
