@@ -833,6 +833,26 @@ class [[eosio::contract("system")]] system_contract : public contract {
             ).send();
         }
 
+        ACTION giftram( const name& from, const name& receiver, const int64_t& ram_bytes, const std::string& memo ){
+            require_auth(from);
+            action(
+                permission_level{from, "active"_n},
+                "eosio"_n,
+                "giftram"_n,
+                std::make_tuple(from, receiver, ram_bytes, std::cref(memo))
+            ).send();
+        }
+
+        ACTION ungiftram( const name& from, const name& to, const std::string& memo ){
+            require_auth(from);
+            action(
+                permission_level{from, "active"_n},
+                "eosio"_n,
+                "ungiftram"_n,
+                std::make_tuple(from, to, std::cref(memo))
+            ).send();
+        }
+
 
         ACTION noop(std::string memo){}
 };

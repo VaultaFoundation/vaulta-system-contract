@@ -737,6 +737,70 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
         BOOST_REQUIRE_EQUAL(get_xyz_balance(user) > old_balance, true);
     }
 
+    // should be able to giftram
+    {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "giftram"_n, user2, mutable_variant_object()
+                ("from",    user)
+                ("receiver",    user2)
+                ("ram_bytes", 10)
+                ("memo", "")
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user")
+        );
+
+        auto bytes_from_before = get_ram_bytes(user);
+        auto bytes_receiver_before = get_ram_bytes(user2);
+        auto old_balance = get_xyz_balance(user);
+        base_tester::push_action( xyz_name, "giftram"_n, user, mutable_variant_object()
+            ("from",    user)
+            ("receiver",    user2)
+            ("ram_bytes", 10)
+            ("memo", "")
+        );
+
+        auto bytes_from_after = get_ram_bytes(user);
+        auto bytes_receiver_after = get_ram_bytes(user2);
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance);
+
+        BOOST_REQUIRE_EQUAL(bytes_from_after, bytes_from_before - 10);
+        BOOST_REQUIRE_EQUAL(bytes_receiver_after, bytes_receiver_before + 10);
+    }
+
+    // ungiftram
+    {
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "ungiftram"_n, user, mutable_variant_object()
+                ("from",    user2)
+                ("to",    user)
+                ("memo", "")
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of user2")
+        );
+
+        auto bytes_from_before = get_ram_bytes(user);
+        auto bytes_receiver_before = get_ram_bytes(user2);
+        auto old_balance = get_xyz_balance(user);
+
+        base_tester::push_action( xyz_name, "ungiftram"_n, user2, mutable_variant_object()
+            ("from",    user2)
+            ("to",    user)
+            ("memo", "")
+        );
+
+        auto bytes_from_after = get_ram_bytes(user);
+        auto bytes_receiver_after = get_ram_bytes(user2);
+
+        BOOST_REQUIRE_EQUAL(get_xyz_balance(user), old_balance);
+
+        BOOST_REQUIRE_EQUAL(bytes_from_after, bytes_from_before + 10);
+        BOOST_REQUIRE_EQUAL(bytes_receiver_after, bytes_receiver_before - 10);
+
+    }
+
     // should be able to stake to rex
     {
         BOOST_REQUIRE_EXCEPTION(
