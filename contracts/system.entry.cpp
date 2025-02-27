@@ -299,35 +299,27 @@ void system_contract::bidname(const name& bidder, const name& newname, const ass
    require_auth(bidder);
    swap_before_forwarding(bidder, bid);
 
-   action(permission_level{bidder, "active"_n}, "eosio"_n, "bidname"_n,
-          std::make_tuple(bidder, newname, asset(bid.amount, EOS)))
-      .send();
+   bidname_action("eosio"_n, {{bidder, "active"_n}}).send(bidder, newname, asset(bid.amount, EOS));
 }
 
 void system_contract::bidrefund(const name& bidder, const name& newname) {
    require_auth(bidder);
    auto eos_balance = get_eos_balance(bidder);
 
-   action(permission_level{bidder, "active"_n}, "eosio"_n, "bidrefund"_n, std::make_tuple(bidder, newname)).send();
-
-   action(permission_level{get_self(), "active"_n}, get_self(), "swapexcess"_n, std::make_tuple(bidder, eos_balance))
-      .send();
+   bidrefund_action("eosio"_n, {{bidder, "active"_n}}).send(bidder, newname);
+   swapexcess_action(get_self(), {{get_self(), "active"_n}}).send(bidder, eos_balance);
 }
 
 void system_contract::buyram(const name& payer, const name& receiver, const asset& quant) {
    require_auth(payer);
    swap_before_forwarding(payer, quant);
-   action(permission_level{payer, "active"_n}, "eosio"_n, "buyram"_n,
-          std::make_tuple(payer, receiver, asset(quant.amount, EOS)))
-      .send();
+   buyram_action("eosio"_n, {{payer, "active"_n}}).send(payer, receiver, asset(quant.amount, EOS));
 }
 
 void system_contract::buyramburn(const name& payer, const asset& quantity, const std::string& memo) {
    require_auth(payer);
    swap_before_forwarding(payer, quantity);
-   action(permission_level{payer, "active"_n}, "eosio"_n, "buyramburn"_n,
-          std::make_tuple(payer, asset(quantity.amount, EOS), std::cref(memo)))
-      .send();
+   buyramburn_action("eosio"_n, {{payer, "active"_n}}).send(payer, asset(quantity.amount, EOS), std::cref(memo));
 }
 
 void system_contract::buyrambytes(name payer, name receiver, uint32_t bytes) {
@@ -343,85 +335,70 @@ void system_contract::buyrambytes(name payer, name receiver, uint32_t bytes) {
    // The balance will be the current + the swapped balance, it just hasn't inlined yet.
    asset current_eos_balance = get_eos_balance(payer) + asset(cost_plus_fee, EOS);
 
-   action(permission_level{payer, "active"_n}, "eosio"_n, "buyrambytes"_n, std::make_tuple(payer, receiver, bytes))
-      .send();
+   buyrambytes_action("eosio"_n, {{payer, "active"_n}}).send(payer, receiver, bytes);
 
    // Removes the possibility of the user having more or less EOS than they should
    // due to on_notify of the transfer or buyram.
-   action(permission_level{payer, "active"_n}, get_self(), "enforcebal"_n,
-          std::make_tuple(payer, current_eos_balance - asset(cost_plus_fee, EOS)))
-      .send();
+   enforcebal_action( get_self(), {{payer, "active"_n}}).send(payer, current_eos_balance - asset(cost_plus_fee, EOS));
 }
 
 void system_contract::buyramself(const name& payer, const asset& quant) {
    require_auth(payer);
    swap_before_forwarding(payer, quant);
-   action(permission_level{payer, "active"_n}, "eosio"_n, "buyramself"_n,
-          std::make_tuple(payer, asset(quant.amount, EOS)))
-      .send();
+   buyramself_action("eosio"_n, {{payer, "active"_n}}).send(payer, asset(quant.amount, EOS));
 }
 
 void system_contract::ramburn(const name& owner, const int64_t& bytes, const std::string& memo) {
    require_auth(owner);
-   action(permission_level{owner, "active"_n}, "eosio"_n, "ramburn"_n, std::make_tuple(owner, bytes, std::cref(memo)))
-      .send();
+   ramburn_action("eosio"_n, {{owner, "active"_n}}).send(owner, bytes, std::cref(memo));
 }
 
 void system_contract::ramtransfer(const name& from, const name& to, const int64_t& bytes, const std::string& memo) {
    require_auth(from);
-   action(permission_level{from, "active"_n}, "eosio"_n, "ramtransfer"_n,
-          std::make_tuple(from, to, bytes, std::cref(memo)))
-      .send();
+   ramtransfer_action("eosio"_n, {{from, "active"_n}}).send(from, to, bytes, std::cref(memo));
 }
 
 void system_contract::sellram(const name& account, const int64_t& bytes) {
    require_auth(account);
    asset eos_before = get_eos_balance(account);
 
-   action(permission_level{account, "active"_n}, "eosio"_n, "sellram"_n, std::make_tuple(account, bytes)).send();
-
-   action(permission_level{get_self(), "active"_n}, get_self(), "swapexcess"_n, std::make_tuple(account, eos_before))
-      .send();
+   sellram_action("eosio"_n, {{account, "active"_n}}).send(account, bytes);
+   swapexcess_action(get_self(), {{get_self(), "active"_n}}).send(account, eos_before);
 }
 
 void system_contract::deposit(const name& owner, const asset& amount) {
    require_auth(owner);
    swap_before_forwarding(owner, amount);
-   action(permission_level{owner, "active"_n}, "eosio"_n, "deposit"_n,
-          std::make_tuple(owner, asset(amount.amount, EOS)))
-      .send();
+   deposit_action("eosio"_n, {{owner, "active"_n}}).send(owner, asset(amount.amount, EOS));
 }
 
 void system_contract::buyrex(const name& from, const asset& amount) {
    require_auth(from);
    enforce_symbol(amount);
    // Do not need a swap here because the EOS is already deposited.
-   action(permission_level{from, "active"_n}, "eosio"_n, "buyrex"_n, std::make_tuple(from, asset(amount.amount, EOS)))
-      .send();
+   buyrex_action("eosio"_n, {{from, "active"_n}}).send(from, asset(amount.amount, EOS));
 }
 
 void system_contract::mvfrsavings(const name& owner, const asset& rex) {
    require_auth(owner);
-   action(permission_level{owner, "active"_n}, "eosio"_n, "mvfrsavings"_n, std::make_tuple(owner, rex)).send();
+   mvfrsavings_action("eosio"_n, {{owner, "active"_n}}).send(owner, rex);
 }
 
 void system_contract::mvtosavings(const name& owner, const asset& rex) {
    require_auth(owner);
-   action(permission_level{owner, "active"_n}, "eosio"_n, "mvtosavings"_n, std::make_tuple(owner, rex)).send();
+   mvtosavings_action("eosio"_n, {{owner, "active"_n}}).send(owner, rex);
 }
 
 void system_contract::sellrex(const name& from, const asset& rex) {
    require_auth(from);
-   action(permission_level{from, "active"_n}, "eosio"_n, "sellrex"_n, std::make_tuple(from, rex)).send();
+   sellrex_action("eosio"_n, {{from, "active"_n}}).send(from, rex);
 }
 
 void system_contract::withdraw(const name& owner, const asset& amount) {
    require_auth(owner);
    enforce_symbol(amount);
 
-   action(permission_level{owner, "active"_n}, "eosio"_n, "withdraw"_n,
-          std::make_tuple(owner, asset(amount.amount, EOS)))
-      .send();
+   withdraw_action("eosio"_n, {{owner, "active"_n}}).send(owner, asset(amount.amount, EOS));
 
    swap_after_forwarding(owner, asset(amount.amount, EOS));
 }
@@ -429,19 +406,15 @@ void system_contract::withdraw(const name& owner, const asset& amount) {
 void system_contract::newaccount(const name& creator, const name& account_name, const authority& owner,
                                  const authority& active) {
    require_auth(creator);
-   action(permission_level{creator, "active"_n}, "eosio"_n, "newaccount"_n,
-          std::make_tuple(creator, account_name, std::cref(owner), std::cref(active)))
-      .send();
+   newaccount_action("eosio"_n, {{creator, "active"_n}}).send(creator, account_name, std::cref(owner), std::cref(active));
 }
 
 // Simplified account creation action that only requires a public key instead of 2 authority objects
 void system_contract::newaccount2(const name& creator, const name& account_name, eosio::public_key key) {
    require_auth(creator);
-   authority auth = authority{.threshold = 1, .keys = {{.key = key, .weight = 1}}};
+   authority auth{.threshold = 1, .keys = {{.key = key, .weight = 1}}};
 
-   action(permission_level{creator, "active"_n}, "eosio"_n, "newaccount"_n,
-          std::make_tuple(creator, account_name, auth, auth))
-      .send();
+   newaccount_action("eosio"_n, {{creator, "active"_n}}).send(creator, account_name, auth, auth);
 }
 
 void system_contract::powerup(const name& payer, const name& receiver, uint32_t days, int64_t net_frac,
@@ -453,14 +426,10 @@ void system_contract::powerup(const name& payer, const name& receiver, uint32_t 
 
    swap_before_forwarding(payer, max_payment);
    asset eos_payment = asset(max_payment.amount, EOS);
-   action(permission_level{payer, "active"_n}, "eosio"_n, "powerup"_n,
-          std::make_tuple(payer, receiver, days, net_frac, cpu_frac, eos_payment))
-      .send();
+   powerup_action("eosio"_n, {{payer, "active"_n}}).send(payer, receiver, days, net_frac, cpu_frac, eos_payment);
 
    // swap excess back to XYZ
-   action(permission_level{get_self(), "active"_n}, get_self(), "swapexcess"_n,
-          std::make_tuple(payer, eos_balance_before_swap))
-      .send();
+   swapexcess_action(get_self(), {{get_self(), "active"_n}}).send(payer, eos_balance_before_swap);
 }
 
 void system_contract::delegatebw(const name& from, const name& receiver, const asset& stake_net_quantity,
@@ -468,10 +437,8 @@ void system_contract::delegatebw(const name& from, const name& receiver, const a
    require_auth(from);
    swap_before_forwarding(from, stake_net_quantity + stake_cpu_quantity);
 
-   action(permission_level{from, "active"_n}, "eosio"_n, "delegatebw"_n,
-          std::make_tuple(from, receiver, asset(stake_net_quantity.amount, EOS), asset(stake_cpu_quantity.amount, EOS),
-                          transfer))
-      .send();
+   delegatebw_action("eosio"_n, {{from, "active"_n}}).
+      send(from, receiver, asset(stake_net_quantity.amount, EOS), asset(stake_cpu_quantity.amount, EOS), transfer);
 }
 
 void system_contract::undelegatebw(const name& from, const name& receiver, const asset& unstake_net_quantity,
@@ -480,22 +447,18 @@ void system_contract::undelegatebw(const name& from, const name& receiver, const
    enforce_symbol(unstake_cpu_quantity);
    enforce_symbol(unstake_net_quantity);
 
-   action(
-      permission_level{from, "active"_n}, "eosio"_n, "undelegatebw"_n,
-      std::make_tuple(from, receiver, asset(unstake_net_quantity.amount, EOS), asset(unstake_cpu_quantity.amount, EOS)))
-      .send();
+   undelegatebw_action("eosio"_n, {{from, "active"_n}}).
+      send(from, receiver, asset(unstake_net_quantity.amount, EOS), asset(unstake_cpu_quantity.amount, EOS));
 }
 
 void system_contract::voteproducer(const name& voter, const name& proxy, const std::vector<name>& producers) {
    require_auth(voter);
-   action(permission_level{voter, "active"_n}, "eosio"_n, "voteproducer"_n,
-          std::make_tuple(voter, proxy, std::cref(producers)))
-      .send();
+   voteproducer_action("eosio"_n, {{voter, "active"_n}}).send(voter, proxy, std::cref(producers));
 }
 
 void system_contract::voteupdate(const name& voter_name) {
    require_auth(voter_name);
-   action(permission_level{voter_name, "active"_n}, "eosio"_n, "voteupdate"_n, std::make_tuple(voter_name)).send();
+   voteupdate_action("eosio"_n, {{voter_name, "active"_n}}).send(voter_name);
 }
 
 void system_contract::unstaketorex(const name& owner, const name& receiver, const asset& from_net,
@@ -504,95 +467,77 @@ void system_contract::unstaketorex(const name& owner, const name& receiver, cons
    enforce_symbol(from_net);
    enforce_symbol(from_cpu);
 
-   action(permission_level{owner, "active"_n}, "eosio"_n, "unstaketorex"_n,
-          std::make_tuple(owner, receiver, asset(from_net.amount, EOS), asset(from_cpu.amount, EOS)))
-      .send();
+   unstaketorex_action("eosio"_n, {{owner, "active"_n}}).
+      send(owner, receiver, asset(from_net.amount, EOS), asset(from_cpu.amount, EOS));
 }
 
 void system_contract::refund(const name& owner) {
    require_auth(owner);
    auto eos_balance = get_eos_balance(owner);
-   action(permission_level{owner, "active"_n}, "eosio"_n, "refund"_n, std::make_tuple(owner)).send();
 
-   action(permission_level{get_self(), "active"_n}, get_self(), "swapexcess"_n, std::make_tuple(owner, eos_balance))
-      .send();
+   refund_action("eosio"_n, {{owner, "active"_n}}).send(owner);
+
+   swapexcess_action(get_self(), {{get_self(), "active"_n}}).send(owner, eos_balance);
 }
 
 void system_contract::claimrewards(const name owner) {
    require_auth(owner);
    auto eos_balance = get_eos_balance(owner);
-   action(permission_level{owner, "active"_n}, "eosio"_n, "claimrewards"_n, std::make_tuple(owner)).send();
 
-   action(permission_level{get_self(), "active"_n}, get_self(), "swapexcess"_n, std::make_tuple(owner, eos_balance))
-      .send();
+   claimrewards_action("eosio"_n, {{owner, "active"_n}}).send(owner);
+
+   swapexcess_action(get_self(), {{get_self(), "active"_n}}).send(owner, eos_balance);
 }
 
 void system_contract::linkauth(name account, name code, name type, name requirement,
                                binary_extension<name> authorized_by) {
    require_auth(account);
-   action(permission_level{account, "active"_n}, "eosio"_n, "linkauth"_n,
-          std::make_tuple(account, code, type, requirement, authorized_by))
-      .send();
+   linkauth_action("eosio"_n, {{account, "active"_n}}).send(account, code, type, requirement, authorized_by);
 }
 
 void system_contract::unlinkauth(name account, name code, name type, binary_extension<name> authorized_by) {
    require_auth(account);
-   action(permission_level{account, "active"_n}, "eosio"_n, "unlinkauth"_n,
-          std::make_tuple(account, code, type, authorized_by))
-      .send();
+   unlinkauth_action("eosio"_n, {{account, "active"_n}}).send(account, code, type, authorized_by);
 }
 
 void system_contract::updateauth(name account, name permission, name parent, authority auth,
                                  binary_extension<name> authorized_by) {
    require_auth(account);
-   action(permission_level{account, "active"_n}, "eosio"_n, "updateauth"_n,
-          std::make_tuple(account, permission, parent, std::cref(auth), authorized_by))
-      .send();
+   updateauth_action("eosio"_n, {{account, "active"_n}}).send(account, permission, parent, std::cref(auth), authorized_by);
 }
 
 void system_contract::deleteauth(name account, name permission, binary_extension<name> authorized_by) {
    require_auth(account);
-   action(permission_level{account, "active"_n}, "eosio"_n, "deleteauth"_n,
-          std::make_tuple(account, permission, authorized_by))
-      .send();
+   deleteauth_action("eosio"_n, {{account, "active"_n}}).send(account, permission, authorized_by);
 }
 
 void system_contract::setabi(const name& account, const std::vector<char>& abi,
                              const binary_extension<std::string>& memo) {
    require_auth(account);
-   action(permission_level{account, "active"_n}, "eosio"_n, "setabi"_n,
-          std::make_tuple(account, std::cref(abi), std::cref(memo)))
-      .send();
+   setabi_action("eosio"_n, {{account, "active"_n}}).send(account, std::cref(abi), std::cref(memo));
 }
 
 void system_contract::setcode(const name& account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code,
                               const binary_extension<std::string>& memo) {
    require_auth(account);
-   action(permission_level{account, "active"_n}, "eosio"_n, "setcode"_n,
-          std::make_tuple(account, vmtype, vmversion, std::cref(code), std::cref(memo)))
-      .send();
+   setcode_action("eosio"_n, {{account, "active"_n}}).send(account, vmtype, vmversion, std::cref(code), std::cref(memo));
 }
 
 void system_contract::donatetorex(const name& payer, const asset& quantity, const std::string& memo) {
    require_auth(payer);
    swap_before_forwarding(payer, quantity);
-   action(permission_level{payer, "active"_n}, "eosio"_n, "donatetorex"_n,
-          std::make_tuple(payer, asset(quantity.amount, EOS), std::cref(memo)))
-      .send();
+   donatetorex_action("eosio"_n, {{payer, "active"_n}}).send(payer, asset(quantity.amount, EOS), std::cref(memo));
 }
 
 void system_contract::giftram(const name& from, const name& receiver, const int64_t& ram_bytes,
                               const std::string& memo) {
    require_auth(from);
-   action(permission_level{from, "active"_n}, "eosio"_n, "giftram"_n,
-          std::make_tuple(from, receiver, ram_bytes, std::cref(memo)))
-      .send();
+   giftram_action("eosio"_n, {{from, "active"_n}}).send(from, receiver, ram_bytes, std::cref(memo));
 }
 
 void system_contract::ungiftram(const name& from, const name& to, const std::string& memo) {
    require_auth(from);
-   action(permission_level{from, "active"_n}, "eosio"_n, "ungiftram"_n, std::make_tuple(from, to, std::cref(memo)))
-      .send();
+   ungiftram_action("eosio"_n, {{from, "active"_n}}).send(from, to, std::cref(memo));
 }
 
 
