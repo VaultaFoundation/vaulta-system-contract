@@ -119,7 +119,7 @@ public:
 
 
    // ----------------------------------------------------
-   // [[eosio::action]] void WRAPPERS ------------------------------------
+   // ACTION WRAPPERS ------------------------------------
    // ----------------------------------------------------
    using init_action         = eosio::action_wrapper<"init"_n, &system_contract::init>;
    using transfer_action     = eosio::action_wrapper<"transfer"_n, &system_contract::transfer>;
