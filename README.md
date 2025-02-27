@@ -191,33 +191,6 @@ without having to swap to EOS first and add more actions to the transaction.
 The actions you can perform with the system wrapper are identical to the actions on the system
 contract (`eosio`), except that the token used in the `asset` parameters is the XYZ token instead of EOS.
 
-The available actions are:
-
-- `bidname( const name& bidder, const name& newname, const asset& bid )`
-- `bidrefund( const name& bidder, const name& newname )`
-- `buyram( const name& payer, const name& receiver, const asset& quantity )`
-- `buyramburn( const name& payer, const asset& quantity, const std::string& memo )`
-- `buyrambytes( name payer, name receiver, uint32_t bytes )`
-- `buyramself( const name& payer, const asset& quantity )`
-- `ramburn( const name& owner, const uint32_t& bytes, const std::string& memo )`
-- `ramtransfer( const name& from, const name& to, const uint32_t& bytes, const std::string& memo )`
-- `sellram( const name& account, const uint32_t& bytes )`
-- `deposit( const name& owner, const asset& amount )`
-- `buyrex( const name& from, const asset& amount )`
-- `mvfrsavings( const name& account, const asset& rex )`
-- `sellrex( const name& owner, const asset& rex )`
-- `withdraw( const name& owner, const asset& amount )`
-- `newaccount( const name& creator, const name& account_name, const name& owner, const name& active )`
-- `newaccount2( const name& creator, const name& account_name, eosio::public_key key )`
-- `powerup( const name& payer, const name& receiver, uint32_t days, int64_t net_frac, int64_t cpu_frac, const asset& max_payment )`
-- `delegatebw( const name& from, const name& receiver, const asset& stake_quantity, bool transfer )`
-- `undelegatebw( const name& from, const name& receiver, const asset& unstake_quantity )`
-- `refund( const name& owner )`
-- `voteproducer( const name& voter, const name& proxy, const std::vector<name>& producers )`
-- `voteupdate( const name& voter_name )`
-- `unstaketorex( const name& owner, const name& receiver, const asset& from_net, const asset& from_cpu )`
-
-Any other action that exists on the `eosio` contract does not require an asset parameter,
-and can be called directly without the need for a pre- or post- swap.
+All user-facing actions from the `eosio` account are available within this wrapper contract.
 
 
