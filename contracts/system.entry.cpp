@@ -81,7 +81,10 @@ void system_contract::open(const name& owner, const symbol& symbol, const name& 
    accounts acnts(get_self(), owner.value);
    auto     it = acnts.find(sym_code_raw);
    if (it == acnts.end()) {
-      acnts.emplace(ram_payer, [&](auto& a) { a.balance = asset{0, symbol}; });
+      acnts.emplace(ram_payer, [&](auto& a) {
+         a.balance = asset{0, symbol};
+         a.released = true;
+      });
    }
 }
 
