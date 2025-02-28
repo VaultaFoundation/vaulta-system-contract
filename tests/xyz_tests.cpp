@@ -133,9 +133,9 @@ BOOST_FIXTURE_TEST_CASE(bidname, eosio_system_tester) try {
    BOOST_REQUIRE(check_balances(alice, { eos("100.0000"), xyz("0.0000") }));
    BOOST_REQUIRE_EQUAL(eosio_xyz.bidname(alice, alice, eos("1.0000")),
                        error("Wrong token used"));                                        // Must use XYZ.
-   BOOST_REQUIRE_EQUAL(eosio_xyz.bidname(alice, alice, xyz("1.0000")), 
+   BOOST_REQUIRE_EQUAL(eosio_xyz.bidname(alice, alice, xyz("1.0000")),
                        error("no balance object found"));                                 // Must have XYZ balance
-   
+
    BOOST_REQUIRE_EQUAL(eosio_token.transfer(alice, xyz_name, eos("50.0000")), success()); // swap 50 EOS to XYZ
    BOOST_REQUIRE(check_balances(alice, { eos("50.0000"), xyz("50.0000") }));
 
@@ -146,7 +146,7 @@ BOOST_FIXTURE_TEST_CASE(bidname, eosio_system_tester) try {
    BOOST_REQUIRE(check_balances(alice, { eos("50.0000"), xyz("49.0000") }));
 
    // Refund bid on a name using xyz contract. Forward refund to eos system
-   // contract and swap back refund to XYZ. 
+   // contract and swap back refund to XYZ.
    // ----------------------------------------------------------------------
    BOOST_REQUIRE_EQUAL(eosio_xyz.bidrefund(alice, "al"_n),                               // In order to get a refund,
                        error("refund not found"));                                       // someone else must bid higher
@@ -155,7 +155,7 @@ BOOST_FIXTURE_TEST_CASE(bidname, eosio_system_tester) try {
    BOOST_REQUIRE_EQUAL(eosio_xyz.bidrefund(alice, "al"_n), success());                   // now Alice can get a refund
    BOOST_REQUIRE(check_balances(alice, { eos("50.0000"), xyz("50.0000") }));
    BOOST_REQUIRE(check_balances(bob,   { eos("50.0000"), xyz("48.0000") }));
-   
+
 } FC_LOG_AND_RETHROW()
 
 
@@ -181,7 +181,7 @@ BOOST_FIXTURE_TEST_CASE(ram, eosio_system_tester) try {
    // ------
    BOOST_REQUIRE_EQUAL(eosio_xyz.buyram(bob, bob, xyz("0.0000")), error("Swap before amount must be greater than 0"));
    BOOST_REQUIRE_EQUAL(eosio_xyz.buyram(bob, bob, eos("0.0000")), error("Wrong token used"));
-   BOOST_REQUIRE_EQUAL(eosio_xyz.buyram(bob, bob, xyz("1.0000")), error("no balance object found")); 
+   BOOST_REQUIRE_EQUAL(eosio_xyz.buyram(bob, bob, xyz("1.0000")), error("no balance object found"));
 
    // to use the xyz contract, Alice needs to have some XYZ tokens.
    BOOST_REQUIRE_EQUAL(eosio_token.transfer(alice, xyz_name, eos("50.0000")), success()); // swap 50 EOS to XYZ
@@ -218,7 +218,7 @@ BOOST_FIXTURE_TEST_CASE(ram, eosio_system_tester) try {
    // -------
    BOOST_REQUIRE_EQUAL(eosio_xyz.ramburn(alice, 0), error("cannot reduce negative byte"));
    BOOST_REQUIRE_EQUAL(eosio_xyz.ramburn(alice, 1<<30), error("insufficient quota"));
-   
+
    BOOST_REQUIRE_EQUAL(eosio_xyz.ramburn(alice, ram_after_buyramself - ram_after_buyram), success());
    BOOST_REQUIRE_EQUAL(get_ram_bytes(alice), ram_after_buyram);
    BOOST_REQUIRE(check_balances(alice, { eos("50.0000"), xyz("47.0000") }));
@@ -251,13 +251,13 @@ BOOST_FIXTURE_TEST_CASE(ram, eosio_system_tester) try {
    BOOST_REQUIRE_EQUAL(eosio_xyz.sellram(bob, ram_bought), success());
    BOOST_REQUIRE_EQUAL(get_ram_bytes(bob), bob_ram_before_sell - ram_bought);
    BOOST_REQUIRE_EQUAL(get_eos_balance(bob),  bob_eos_before_sell);  // no change, proceeds swapped for XYZ
-   BOOST_REQUIRE_GT(get_xyz_balance(bob), bob_xyz_before_sell);      // proceeds of sellram 
+   BOOST_REQUIRE_GT(get_xyz_balance(bob), bob_xyz_before_sell);      // proceeds of sellram
 } FC_LOG_AND_RETHROW()
 
 
 // --------------------------------------------------------------------------------
 // tested: deposit, buyrex, withdraw, delegatebw,undelegatebw, refund
-// no comprehensive tests needed as direct forwarding: sellrex, mvtosavings, mvfrsavings, 
+// no comprehensive tests needed as direct forwarding: sellrex, mvtosavings, mvfrsavings,
 // --------------------------------------------------------------------------------
 BOOST_FIXTURE_TEST_CASE(rex_tests, eosio_system_tester) try {
    const std::vector<account_name> accounts = { "alice"_n, "bob"_n };
@@ -286,29 +286,29 @@ BOOST_FIXTURE_TEST_CASE(rex_tests, eosio_system_tester) try {
 
    // buyrex
    // ------
-   BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, eos("1.0000")), error("Wrong token used")); 
-   BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, asset::from_string("1.0000 BOGUS")), error("Wrong token used")); 
+   BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, eos("1.0000")), error("Wrong token used"));
+   BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, asset::from_string("1.0000 BOGUS")), error("Wrong token used"));
    BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, xyz("0.0000")), error("must use positive amount"));
    BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, xyz("-1.0000")), error("must use positive amount"));
-   
+
    BOOST_REQUIRE_EQUAL(eosio_xyz.buyrex(bob, xyz("2.0000")), success());
    BOOST_REQUIRE_EQUAL(get_rex_balance(bob), rex(20000'0000u));
 
    // mvtosavings
    // -----------
-   BOOST_REQUIRE_EQUAL(eosio_xyz.mvtosavings(bob, rex(20000'0000u)), success()); 
+   BOOST_REQUIRE_EQUAL(eosio_xyz.mvtosavings(bob, rex(20000'0000u)), success());
 
    // mvfrsavings
    // -----------
    BOOST_REQUIRE_EQUAL(eosio_xyz.mvfrsavings(bob, rex(20000'0000u)), success());
-   
+
    // sellrex
    // ------
    BOOST_REQUIRE_EQUAL(eosio_xyz.sellrex(bob, eos("0.0000")), error("asset must be a positive amount of (REX, 4)"));
    BOOST_REQUIRE_EQUAL(eosio_xyz.sellrex(bob, xyz("-1.0000")), error("asset must be a positive amount of (REX, 4)"));
    BOOST_REQUIRE_EQUAL(eosio_xyz.sellrex(bob, xyz("1.0000")), error("asset must be a positive amount of (REX, 4)"));
 
-   BOOST_REQUIRE_EQUAL(eosio_xyz.sellrex(bob, rex(20000'0000u)), error("insufficient available rex")); 
+   BOOST_REQUIRE_EQUAL(eosio_xyz.sellrex(bob, rex(20000'0000u)), error("insufficient available rex"));
    produce_block( fc::days(30) ); // must wait
    BOOST_REQUIRE_EQUAL(eosio_xyz.sellrex(bob, rex(20000'0000u)), success());
 
@@ -317,7 +317,7 @@ BOOST_FIXTURE_TEST_CASE(rex_tests, eosio_system_tester) try {
    BOOST_REQUIRE_EQUAL(eosio_xyz.withdraw(bob, eos("1.0000")), error("Wrong token used"));
    BOOST_REQUIRE_EQUAL(eosio_xyz.withdraw(bob, asset::from_string("5.0000 BOGUS")), error("Wrong token used"));
    BOOST_REQUIRE_EQUAL(eosio_xyz.withdraw(bob, xyz("11.0000")), error("insufficient funds")); // we deposited only 10 XYZ
-   
+
    BOOST_REQUIRE_EQUAL(eosio_xyz.withdraw(bob, xyz("5.0000")), success());
    BOOST_REQUIRE_EQUAL(get_xyz_balance(bob), xyz("45.0000"));               // check that it got converted back into XYZ
 
@@ -355,7 +355,7 @@ BOOST_FIXTURE_TEST_CASE(rex_tests, eosio_system_tester) try {
    BOOST_REQUIRE_EQUAL(eosio_xyz.undelegatebw(bob, bob, bogus_asset, xyz("0.0000")), error("Wrong token used"));
    BOOST_REQUIRE_EQUAL(eosio_xyz.undelegatebw(bob, bob, xyz("0.0000"), xyz("0.0000")),
                        error("must unstake a positive amount"));
-   
+
    BOOST_REQUIRE_EQUAL(eosio_xyz.undelegatebw(bob, bob, xyz("0.0000"), xyz("1.0000")), success());
 
    // refund
@@ -547,6 +547,170 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
             missing_auth_exception,
             fc_exception_message_is("missing authority of user2")
         );
+    }
+
+    // should consume the contract's RAM when swapping from a new account using transfer
+    {
+        // buy ram for xyz account
+        {
+            base_tester::push_action( eos_name, "buyram"_n, eos_name, mutable_variant_object()
+                ("payer",    eos_name)
+                ("receiver", xyz_name)
+                ("quant", eos("2000000.0000"))
+            );
+        }
+
+        // this user hasn't paid the ram for their own tokens yet because they haven't touched
+        // them yet, so we're going to make the user take ram ownership of their row on eosio.token
+        transfer(swapram1, user, eos("1.0000"), swapram1);
+        transfer(swapram2, user, eos("1.0000"), swapram2);
+
+        {
+            auto eos_ram_before = get_account_ram(eos_name);
+            auto xyz_ram_before = get_account_ram(xyz_name);
+            auto user_ram_before = get_account_ram(swapram1);
+
+            transfer(swapram1, xyz_name, eos("1.0000"), swapram1);
+
+            auto eos_ram_after = get_account_ram(eos_name);
+            auto xyz_ram_after = get_account_ram(xyz_name);
+            auto user_ram_after = get_account_ram(swapram1);
+
+            auto user_ram_delta = user_ram_after - user_ram_before;
+            auto xyz_ram_delta = xyz_ram_after - xyz_ram_before;
+            auto eos_ram_delta = eos_ram_after - eos_ram_before;
+
+            // Only the XYZ contract should have used RAM
+            BOOST_REQUIRE_EQUAL(user_ram_delta, 0);
+            BOOST_REQUIRE_EQUAL(xyz_ram_delta, -240); // 240 bytes of RAM used by the xyz contract
+            BOOST_REQUIRE_EQUAL(eos_ram_delta, 0);
+        }
+
+        struct ram_data {
+            uint64_t user_delta;
+            uint64_t xyz_delta;
+            uint64_t eos_delta;
+            uint64_t ram_back_user_delta;
+            uint64_t ram_back_xyz_delta;
+        };
+
+        // lambda function
+        auto test_swap_ram = [&](const account_name account) {
+            ram_data data;
+            {
+                auto eos_ram_before = get_account_ram(eos_name);
+                auto xyz_ram_before = get_account_ram(xyz_name);
+                auto user_ram_before = get_account_ram(account);
+
+                transfer(account, xyz_name, eos("1.0000"), account);
+
+                auto eos_ram_after = get_account_ram(eos_name);
+                auto xyz_ram_after = get_account_ram(xyz_name);
+                auto user_ram_after = get_account_ram(account);
+
+                data.user_delta = user_ram_after - user_ram_before;
+                data.xyz_delta = xyz_ram_after - xyz_ram_before;
+                data.eos_delta = eos_ram_after - eos_ram_before;
+            }
+
+            {
+                auto xyz_ram_before = get_account_ram(xyz_name);
+                auto user_ram_before = get_account_ram(account);
+                transfer_xyz(account, user, xyz("1.0000"));
+                auto xyz_ram_after = get_account_ram(xyz_name);
+                auto user_ram_after = get_account_ram(account);
+
+                data.ram_back_user_delta = user_ram_after - user_ram_before;
+                data.ram_back_xyz_delta = xyz_ram_after - xyz_ram_before;
+            }
+
+
+            produce_block();
+
+            return data;
+        };
+
+        auto tests = {
+            test_swap_ram(swapram1),
+            test_swap_ram(swapram2)
+        };
+
+        // iterate all tests and cout
+        for (auto& test : tests) {
+            std::cout << "user_delta: " << test.user_delta << std::endl;
+            std::cout << "xyz_delta: " << test.xyz_delta << std::endl;
+            std::cout << "eos_delta: " << test.eos_delta << std::endl;
+            std::cout << "ram_back_user_delta: " << test.ram_back_user_delta << std::endl;
+            std::cout << "ram_back_xyz_delta: " << test.ram_back_xyz_delta << std::endl;
+        }
+        BOOST_REQUIRE_EQUAL(true, false);
+
+//         {
+//             auto eos_ram_before = get_account_ram(eos_name);
+//             auto xyz_ram_before = get_account_ram(xyz_name);
+//             auto user_ram_before = get_account_ram(swapram2);
+//
+//             transfer(swapram2, xyz_name, eos("1.0000"), swapram2);
+//
+//             auto eos_ram_after = get_account_ram(eos_name);
+//             auto xyz_ram_after = get_account_ram(xyz_name);
+//             auto user_ram_after = get_account_ram(swapram2);
+//
+//             auto user_ram_delta = user_ram_after - user_ram_before;
+//             auto xyz_ram_delta = xyz_ram_after - xyz_ram_before;
+//             auto eos_ram_delta = eos_ram_after - eos_ram_before;
+//
+//             std::cout << "user_ram_delta: " << user_ram_delta << std::endl;
+//             std::cout << "xyz_ram_delta: " << xyz_ram_delta << std::endl;
+//             std::cout << "eos_ram_delta: " << eos_ram_delta << std::endl;
+//
+//             // Only the XYZ contract should have used RAM
+//             BOOST_REQUIRE_EQUAL(user_ram_delta, 0);
+//             BOOST_REQUIRE_EQUAL(xyz_ram_delta, -240); // 240 bytes of RAM used by the xyz contract
+//             BOOST_REQUIRE_EQUAL(eos_ram_delta, 0);
+//         }
+//
+//         // the user should take ram ownership on first transfer
+//         {
+//             auto xyz_ram_before = get_account_ram(xyz_name);
+//             auto user_ram_before = get_account_ram(swapram1);
+//             transfer_xyz(swapram1, user, xyz("1.0000"));
+//             auto xyz_ram_after = get_account_ram(xyz_name);
+//             auto user_ram_after = get_account_ram(swapram1);
+//
+//             auto user_ram_delta = user_ram_after - user_ram_before;
+//             auto xyz_ram_delta = xyz_ram_after - xyz_ram_before;
+//
+//             std::cout << "user_ram_delta: " << user_ram_delta << std::endl;
+//             std::cout << "xyz_ram_delta: " << xyz_ram_delta << std::endl;
+//
+//             BOOST_REQUIRE_EQUAL(user_ram_delta, -128);
+//             BOOST_REQUIRE_EQUAL(xyz_ram_delta, 128);
+//
+//             BOOST_REQUIRE_EQUAL(true, false);
+//         }
+//
+//         // the user should take ram ownership on first transfer
+//         {
+//             auto xyz_ram_before = get_account_ram(xyz_name);
+//             auto user_ram_before = get_account_ram(swapram2);
+//             transfer_xyz(swapram2, user, xyz("1.0000"));
+//             auto xyz_ram_after = get_account_ram(xyz_name);
+//             auto user_ram_after = get_account_ram(swapram2);
+//
+//             auto user_ram_delta = user_ram_after - user_ram_before;
+//             auto xyz_ram_delta = xyz_ram_after - xyz_ram_before;
+//
+//             std::cout << "user_ram_delta: " << user_ram_delta << std::endl;
+//             std::cout << "xyz_ram_delta: " << xyz_ram_delta << std::endl;
+//
+//             BOOST_REQUIRE_EQUAL(user_ram_delta, -128);
+//             BOOST_REQUIRE_EQUAL(xyz_ram_delta, 128);
+//
+//             BOOST_REQUIRE_EQUAL(true, false);
+//         }
+
+
     }
 
 
@@ -1228,61 +1392,7 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
 
 
-    // should consume the contract's RAM when swapping from a new account using transfer
-    {
-        // buy ram for xyz account
-        {
-            base_tester::push_action( eos_name, "buyram"_n, eos_name, mutable_variant_object()
-                ("payer",    eos_name)
-                ("receiver", xyz_name)
-                ("quant", eos("2000000.0000"))
-            );
-        }
-        // stake some resources so that the accounts have a resource object to pull ram from
-        {
-            base_tester::push_action( eos_name, "delegatebw"_n, eos_name, mutable_variant_object()
-                ("from",    eos_name)
-                ("receiver", xyz_name)
-                ("stake_net_quantity", eos("10.0000"))
-                ("stake_cpu_quantity", eos("500.0000"))
-                ("transfer", false)
-            );
-            base_tester::push_action( eos_name, "delegatebw"_n, eos_name, mutable_variant_object()
-                ("from",    eos_name)
-                ("receiver", swapram1)
-                ("stake_net_quantity", eos("10.0000"))
-                ("stake_cpu_quantity", eos("500.0000"))
-                ("transfer", false)
-            );
-            base_tester::push_action( eos_name, "delegatebw"_n, eos_name, mutable_variant_object()
-                ("from",    eos_name)
-                ("receiver", swapram2)
-                ("stake_net_quantity", eos("10.0000"))
-                ("stake_cpu_quantity", eos("500.0000"))
-                ("transfer", false)
-            );
-        }
 
-        std::cout << "testdata before: " << get_account_ram(xyz_name) << std::endl;
-        std::cout << "testdata before2: " << get_account_ram(eos_name) << std::endl;
-        auto xyz_ram_before = get_ram_bytes(xyz_name);
-        auto user_ram_before = get_ram_bytes(swapram1);
-        transfer(swapram1, xyz_name, eos("100.0000"), swapram1);
-
-        auto xyz_ram_after = get_ram_bytes(xyz_name);
-        auto user_ram_after = get_ram_bytes(swapram1);
-
-        std::cout << "testdata: " << get_account_ram(xyz_name) << std::endl;
-        std::cout << "testdata2: " << get_account_ram(eos_name) << std::endl;
-
-        // console out ram
-        std::cout << "user_ram_before: " << user_ram_before << std::endl;
-        std::cout << "user_ram_after: " << user_ram_after << std::endl;
-        std::cout << "xyz_ram_before: " << xyz_ram_before << std::endl;
-        std::cout << "xyz_ram_after: " << xyz_ram_after << std::endl;
-
-        BOOST_REQUIRE_EQUAL(true, false);
-    }
 
 
     // should be able to powerup and get overages back in XYZ
