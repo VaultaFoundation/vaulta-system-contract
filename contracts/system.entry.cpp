@@ -83,7 +83,7 @@ void system_contract::open(const name& owner, const symbol& symbol, const name& 
    if (it == acnts.end()) {
       acnts.emplace(ram_payer, [&](auto& a) {
          a.balance = asset{0, symbol};
-         a.released = true;
+         a.released = ram_payer == owner;
       });
    }
 }
@@ -122,7 +122,11 @@ void system_contract::add_balance(const name& owner, const asset& value, const n
    accounts to_acnts(get_self(), owner.value);
    auto     to = to_acnts.find(value.symbol.code().raw());
    if (to == to_acnts.end()) {
-      to_acnts.emplace(get_self(), [&](auto& a) { a.balance = value; });
+      auto payer = ram_payer == owner ? owner : get_self();
+      to_acnts.emplace(payer, [&](auto& a) {
+         a.balance = value;
+         a.released = ram_payer == owner;
+      });
    } else {
       to_acnts.modify(to, same_payer, [&](auto& a) { a.balance += value; });
    }
