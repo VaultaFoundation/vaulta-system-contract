@@ -950,12 +950,71 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
     }
 
 
+    // setcode and setabi
+    {
+        // create contract account
+        name contract_account = "contractest"_n;
+        create_accounts_with_resources( { contract_account } );
+
+        // get some CPU and NET with delegatebw
+        base_tester::push_action( eos_name, "delegatebw"_n, eos_name, mutable_variant_object()
+            ("from",    eos_name)
+            ("receiver", contract_account)
+            ("stake_net_quantity", eos("10.0000"))
+            ("stake_cpu_quantity", eos("500.0000"))
+            ("transfer", false)
+        );
+
+        base_tester::push_action( eos_name, "buyram"_n, eos_name, mutable_variant_object()
+            ("payer",    eos_name)
+            ("receiver", contract_account)
+            ("quant", eos("1000000.0000"))
+        );
+
+        auto code = prepare_wasm(eos_contracts::fees_wasm());
+
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "setcode"_n, user, mutable_variant_object()
+                ("account",    contract_account)
+                ("vmtype",     0)
+                ("vmversion",  0)
+                ("code",       code )
+                ("memo",       "")
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of contractest")
+        );
+
+        base_tester::push_action( xyz_name, "setcode"_n, contract_account, mutable_variant_object()
+            ("account",    contract_account)
+            ("vmtype",     0)
+            ("vmversion",  0)
+            ("code",       code )
+            ("memo",       "")
+        );
+
+        BOOST_REQUIRE_EXCEPTION(
+            base_tester::push_action( xyz_name, "setabi"_n, user, mutable_variant_object()
+                ("account",    contract_account)
+                ("abi",        eos_contracts::token_abi() )
+                ("memo",       "")
+            ),
+            missing_auth_exception,
+            fc_exception_message_is("missing authority of contractest")
+        );
+
+        base_tester::push_action( xyz_name, "setabi"_n, contract_account, mutable_variant_object()
+            ("account",    contract_account)
+            ("abi",        eos_contracts::token_abi() )
+            ("memo",       "")
+        );
+
+    }
 
 
     transfer(eos_name, user, eos("100000.0000"));
     transfer(user, xyz_name, eos("100000.0000"), user);
     vector<name> producers = active_and_vote_producers();
-
 
 
     // should be able to delegate and undelegate bw
@@ -1126,67 +1185,6 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
             ("account",    user)
             ("permission", "test"_n)
         );
-    }
-
-    // setcode and setabi
-    {
-        // create contract account
-        name contract_account = "contractest"_n;
-        create_accounts_with_resources( { contract_account } );
-
-        // get some CPU and NET with delegatebw
-        base_tester::push_action( eos_name, "delegatebw"_n, eos_name, mutable_variant_object()
-            ("from",    eos_name)
-            ("receiver", contract_account)
-            ("stake_net_quantity", eos("10.0000"))
-            ("stake_cpu_quantity", eos("500.0000"))
-            ("transfer", false)
-        );
-
-        base_tester::push_action( eos_name, "buyram"_n, eos_name, mutable_variant_object()
-            ("payer",    eos_name)
-            ("receiver", contract_account)
-            ("quant", eos("1000000.0000"))
-        );
-
-        auto code = prepare_wasm(eos_contracts::fees_wasm());
-
-        BOOST_REQUIRE_EXCEPTION(
-            base_tester::push_action( xyz_name, "setcode"_n, user, mutable_variant_object()
-                ("account",    contract_account)
-                ("vmtype",     0)
-                ("vmversion",  0)
-                ("code",       code )
-                ("memo",       "")
-            ),
-            missing_auth_exception,
-            fc_exception_message_is("missing authority of contractest")
-        );
-
-        base_tester::push_action( xyz_name, "setcode"_n, contract_account, mutable_variant_object()
-            ("account",    contract_account)
-            ("vmtype",     0)
-            ("vmversion",  0)
-            ("code",       code )
-            ("memo",       "")
-        );
-
-        BOOST_REQUIRE_EXCEPTION(
-            base_tester::push_action( xyz_name, "setabi"_n, user, mutable_variant_object()
-                ("account",    contract_account)
-                ("abi",        eos_contracts::token_abi() )
-                ("memo",       "")
-            ),
-            missing_auth_exception,
-            fc_exception_message_is("missing authority of contractest")
-        );
-
-        base_tester::push_action( xyz_name, "setabi"_n, contract_account, mutable_variant_object()
-            ("account",    contract_account)
-            ("abi",        eos_contracts::token_abi() )
-            ("memo",       "")
-        );
-
     }
 
     // voteproducer
