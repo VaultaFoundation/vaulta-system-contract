@@ -376,12 +376,18 @@ const account_name user2 = "user2"_n;
 const account_name user3 = "user3"_n;
 const account_name exchange = "exchange"_n;
 const account_name powerupuser = "powuser"_n;
+const vector<account_name> swapram_accounts = { "swapram1"_n, "swapram2"_n, "swapram3"_n, "swapram4"_n, "swapram5"_n };
+const vector<account_name> swaptoram_accounts = { "swaptoram1"_n, "swaptoram2"_n, "swaptoram3"_n, "swaptoram4"_n, "swaptoram5"_n };
+const vector<account_name> swaptoram_receivers = { "rswaptoram1"_n, "srwaptoram2"_n, "rswaptoram3"_n, "srwaptoram4"_n, "rswaptoram5"_n };
 
 BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
 
     const std::vector<account_name> accounts = { issuer, swapper, hacker, user, user2, user3, exchange, powerupuser, "eosio.reserv"_n };
     create_accounts_with_resources( accounts );
+    create_accounts_with_resources( swapram_accounts );
+    create_accounts_with_resources( swaptoram_accounts );
+    create_accounts_with_resources( swaptoram_receivers );
     produce_block();
 
     // Fill some accounts with EOS so they can swap and test things
@@ -392,6 +398,14 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
     BOOST_REQUIRE_EQUAL(get_balance(user), eos("100.0000"));
     transfer(eos_name, user2,   eos("100.0000"));
     transfer(eos_name, user3,   eos("100.0000"));
+    for (auto a : swapram_accounts) {
+        transfer(eos_name, a, eos("100.0000"));
+    }
+    for (auto a : swaptoram_accounts) {
+        transfer(eos_name, a, eos("100.0000"));
+    }
+    transfer(eos_name, swaptoram_receivers[0], eos("100.0000"));
+    transfer(eos_name, swaptoram_receivers[1], eos("100.0000"));
 
     // check that we do start with 2.1B XYZ in XYZ's account (`init` action called in deploy_contract)
     // -----------------------------------------------------------------------------------------------
@@ -541,6 +555,175 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
             fc_exception_message_is("missing authority of user2")
         );
     }
+
+    // should consume the contract's RAM when swapping from a new account using transfer
+    {
+        // buy ram for xyz account
+        {
+            base_tester::push_action( eos_name, "buyram"_n, eos_name, mutable_variant_object()
+                ("payer",    eos_name)
+                ("receiver", xyz_name)
+                ("quant", eos("2000000.0000"))
+            );
+        }
+
+        // the users haven't paid the ram for their own tokens yet because they haven't touched
+        // them yet, so we're going to make the user take ram ownership of their row on eosio.token
+        for (auto a : swapram_accounts) {
+            transfer(a, user, eos("1.0000"), a);
+        }
+        for (auto a : swaptoram_accounts) {
+            transfer(a, user, eos("1.0000"), a);
+        }
+        transfer(swaptoram_receivers[0], user, eos("1.0000"), swaptoram_receivers[0]);
+        transfer(swaptoram_receivers[1], user, eos("1.0000"), swaptoram_receivers[1]);
+
+        struct ram_data {
+            name account;
+            int64_t swap_user_delta;
+            int64_t swap_xyz_delta;
+            int64_t swap_eos_delta;
+            int64_t transfer_user_delta;
+            int64_t transfer_xyz_delta;
+        };
+
+        auto test_swap_ram = [&](const account_name account) {
+            ram_data data;
+            data.account = account;
+            {
+                auto eos_ram_before = get_account_ram(eos_name);
+                auto xyz_ram_before = get_account_ram(xyz_name);
+                auto user_ram_before = get_account_ram(account);
+
+                transfer(account, xyz_name, eos("10.0000"), account);
+
+                auto eos_ram_after = get_account_ram(eos_name);
+                auto xyz_ram_after = get_account_ram(xyz_name);
+                auto user_ram_after = get_account_ram(account);
+
+                data.swap_user_delta = user_ram_after - user_ram_before;
+                data.swap_xyz_delta = xyz_ram_after - xyz_ram_before;
+                data.swap_eos_delta = eos_ram_after - eos_ram_before;
+            }
+
+            {
+                auto xyz_ram_before = get_account_ram(xyz_name);
+                auto user_ram_before = get_account_ram(account);
+                transfer_xyz(account, user, xyz("1.0000"));
+                auto xyz_ram_after = get_account_ram(xyz_name);
+                auto user_ram_after = get_account_ram(account);
+
+                data.transfer_user_delta = user_ram_after - user_ram_before;
+                data.transfer_xyz_delta = xyz_ram_after - xyz_ram_before;
+            }
+
+
+            produce_block();
+
+            return data;
+        };
+
+        {
+            for (auto a : swapram_accounts) {
+
+                auto results = test_swap_ram(a);
+
+                // When swapping, the xyz contract pays for the RAM
+                BOOST_REQUIRE_EQUAL(results.swap_user_delta, 0);
+                BOOST_REQUIRE_EQUAL(results.swap_xyz_delta, -241); // 240 bytes of RAM used by the xyz contract
+                BOOST_REQUIRE_EQUAL(results.swap_eos_delta, 0);
+
+                // Upon first transfer, the user should take RAM ownership and release the xyz contract's RAM
+                BOOST_REQUIRE_EQUAL(results.transfer_user_delta, -241);
+                BOOST_REQUIRE_EQUAL(results.transfer_xyz_delta, 241);
+            }
+        }
+
+        // There should be no changes in RAM this time as the user already pays for their rows
+        {
+            for (auto a : swapram_accounts) {
+
+                auto results = test_swap_ram(a);
+
+                BOOST_REQUIRE_EQUAL(results.swap_user_delta, 0);
+                BOOST_REQUIRE_EQUAL(results.swap_xyz_delta, 0);
+                BOOST_REQUIRE_EQUAL(results.swap_eos_delta, 0);
+                BOOST_REQUIRE_EQUAL(results.transfer_user_delta, 0);
+                BOOST_REQUIRE_EQUAL(results.transfer_xyz_delta, 0);
+            }
+        }
+    }
+
+    // should consume ram the same way with swapto
+    {
+        auto test_swapto_ram = [&](const account_name from, const account_name to) {
+
+            std::cout << "from: " << from << std::endl;
+            std::cout << "to: " << to << std::endl;
+            std::cout << " ------------------ " << std::endl;
+            {
+                auto eos_ram_before = get_account_ram(eos_name);
+                auto xyz_ram_before = get_account_ram(xyz_name);
+                auto from_ram_before = get_account_ram(from);
+                auto to_ram_before = get_account_ram(to);
+
+                base_tester::push_action( xyz_name, "swapto"_n, from, mutable_variant_object()
+                    ("from",    from)
+                    ("to",      to )
+                    ("quantity", eos("1.0000"))
+                    ("memo", "")
+                );
+
+                auto eos_ram_after = get_account_ram(eos_name);
+                auto xyz_ram_after = get_account_ram(xyz_name);
+                auto from_ram_after = get_account_ram(from);
+                auto to_ram_after = get_account_ram(to);
+
+                std::cout << "swapto" << std::endl;
+                std::cout << "from delta: " << from_ram_after - from_ram_before << std::endl;
+                std::cout << "to delta: " << to_ram_after - to_ram_before << std::endl;
+                std::cout << "xyz delta: " << xyz_ram_after - xyz_ram_before << std::endl;
+
+
+//                 BOOST_REQUIRE_EQUAL(from_ram_after - from_ram_before, 0);
+//                 BOOST_REQUIRE_EQUAL(to_ram_after - to_ram_before, 0);
+//                 BOOST_REQUIRE_EQUAL(xyz_ram_after - xyz_ram_before, -241);
+//                 BOOST_REQUIRE_EQUAL(eos_ram_after - eos_ram_before, 0);
+            }
+
+            // check on first transfer
+            {
+                auto xyz_ram_before = get_account_ram(xyz_name);
+                auto from_ram_before = get_account_ram(from);
+                auto to_ram_before = get_account_ram(to);
+                transfer_xyz(to, user, xyz("1.0000"));
+                auto xyz_ram_after = get_account_ram(xyz_name);
+                auto from_ram_after = get_account_ram(from);
+                auto to_ram_after = get_account_ram(to);
+
+                std::cout << "first transfer from 'to' account" << std::endl;
+                std::cout << "from delta: " << from_ram_after - from_ram_before << std::endl;
+                std::cout << "to delta: " << to_ram_after - to_ram_before << std::endl;
+                std::cout << "xyz delta: " << xyz_ram_after - xyz_ram_before << std::endl;
+
+//
+//                 BOOST_REQUIRE_EQUAL(from_ram_after - from_ram_before, 0);
+//                 BOOST_REQUIRE_EQUAL(to_ram_after - to_ram_before, 0);
+//                 BOOST_REQUIRE_EQUAL(xyz_ram_after - xyz_ram_before, 0);
+            }
+
+            produce_block();
+        };
+        test_swapto_ram(swaptoram_accounts[0], swaptoram_receivers[0]);
+        test_swapto_ram(swaptoram_accounts[1], swaptoram_receivers[0]);
+        test_swapto_ram(swaptoram_accounts[2], swaptoram_receivers[2]);
+        test_swapto_ram(swaptoram_accounts[2], swaptoram_receivers[3]);
+        test_swapto_ram(swaptoram_accounts[2], swaptoram_receivers[4]);
+
+        BOOST_REQUIRE_EQUAL(true, false);
+    }
+
+
 
 
     // swap some EOS to XYZ

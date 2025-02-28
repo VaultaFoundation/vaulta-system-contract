@@ -132,7 +132,17 @@ void system_contract::sub_balance(const name& owner, const asset& value) {
    const auto& from = from_acnts.get(value.symbol.code().raw(), "no balance object found");
    check(from.balance.amount >= value.amount, "overdrawn balance");
 
-   from_acnts.modify(from, owner, [&](auto& a) { a.balance -= value; });
+   if(!from.released){
+      from_acnts.erase( from );
+      from_acnts.emplace( owner, [&]( auto& a ){
+         a.balance = from.balance - value;
+         a.released = true;
+      });
+   } else {
+      from_acnts.modify( from, owner, [&]( auto& a ) {
+         a.balance -= value;
+      });
+   }
 }
 
 // ----------------------------------------------------
@@ -257,7 +267,7 @@ void system_contract::swap_after_forwarding(const name& account, const asset& qu
 
 // Gets a given account's balance of EOS
 asset system_contract::get_eos_balance(const name& account) {
-   accounts    acnts("eosio.token"_n, account.value);
+   standard_accounts acnts("eosio.token"_n, account.value);
    const auto& found = acnts.find(EOS.code().raw());
    if (found == acnts.end()) {
       return asset(0, EOS);
