@@ -120,7 +120,7 @@ void system_contract::add_balance(const name& owner, const asset& value, const n
    accounts to_acnts(get_self(), owner.value);
    auto     to = to_acnts.find(value.symbol.code().raw());
    if (to == to_acnts.end()) {
-      to_acnts.emplace(ram_payer, [&](auto& a) { a.balance = value; });
+      to_acnts.emplace(get_self(), [&](auto& a) { a.balance = value; });
    } else {
       to_acnts.modify(to, same_payer, [&](auto& a) { a.balance += value; });
    }
