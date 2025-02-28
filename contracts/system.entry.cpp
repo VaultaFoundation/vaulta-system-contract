@@ -4,7 +4,6 @@
 #include <system/oldsystem.hpp>
 
 using namespace eosio;
-using namespace system_token;
 using namespace system_origin;
 
 /**
@@ -82,7 +81,10 @@ void system_contract::open(const name& owner, const symbol& symbol, const name& 
    accounts acnts(get_self(), owner.value);
    auto     it = acnts.find(sym_code_raw);
    if (it == acnts.end()) {
-      acnts.emplace(ram_payer, [&](auto& a) { a.balance = asset{0, symbol}; });
+      acnts.emplace(ram_payer, [&](auto& a) {
+         a.balance = asset{0, symbol};
+         a.released = ram_payer == owner;
+      });
    }
 }
 
@@ -120,7 +122,10 @@ void system_contract::add_balance(const name& owner, const asset& value, const n
    accounts to_acnts(get_self(), owner.value);
    auto     to = to_acnts.find(value.symbol.code().raw());
    if (to == to_acnts.end()) {
-      to_acnts.emplace(ram_payer, [&](auto& a) { a.balance = value; });
+      to_acnts.emplace(ram_payer == owner ? owner : get_self(), [&](auto& a) {
+         a.balance = value;
+         a.released = ram_payer == owner;
+      });
    } else {
       to_acnts.modify(to, same_payer, [&](auto& a) { a.balance += value; });
    }
@@ -132,7 +137,19 @@ void system_contract::sub_balance(const name& owner, const asset& value) {
    const auto& from = from_acnts.get(value.symbol.code().raw(), "no balance object found");
    check(from.balance.amount >= value.amount, "overdrawn balance");
 
-   from_acnts.modify(from, owner, [&](auto& a) { a.balance -= value; });
+   if(!from.released){
+      auto balance = from.balance;
+      // This clears out the RAM consumed by the scope overhead.
+      from_acnts.erase( from );
+      from_acnts.emplace( owner, [&]( auto& a ){
+         a.balance = balance - value;
+         a.released = true;
+      });
+   } else {
+      from_acnts.modify( from, owner, [&]( auto& a ) {
+         a.balance -= value;
+      });
+   }
 }
 
 // ----------------------------------------------------
@@ -257,7 +274,7 @@ void system_contract::swap_after_forwarding(const name& account, const asset& qu
 
 // Gets a given account's balance of EOS
 asset system_contract::get_eos_balance(const name& account) {
-   accounts    acnts("eosio.token"_n, account.value);
+   eosio_token::accounts acnts("eosio.token"_n, account.value);
    const auto& found = acnts.find(EOS.code().raw());
    if (found == acnts.end()) {
       return asset(0, EOS);

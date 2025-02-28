@@ -223,6 +223,13 @@ public:
    // --------------------
    // check token balances
    // --------------------
+   int8_t get_xyz_account_released(account_name account) const {
+      vector<char> data = get_row_by_account(xyz_name, account, "accounts"_n, account_name(xyz_symbol().to_symbol_code().value));
+      if (data.empty())
+         return -1;
+      return xyz_abi_ser.binary_to_variant("account", data, abi_serializer_max_time)["released"].as<int8_t>();
+   }
+
    asset get_balance(name code, account_name act, symbol token) const {
       vector<char> data = get_row_by_account(code, act, "accounts"_n, account_name(token.to_symbol_code().value));
       if (data.empty())
@@ -724,6 +731,14 @@ public:
       control->get_resource_limits_manager().get_account_limits(a, ram_bytes, net, cpu);
       return cpu;
    };
+
+   auto get_account_ram(const account_name& a) {
+      int64_t ram_bytes = 0, net = 0, cpu = 0;
+      auto rlm = control->get_resource_limits_manager();
+      auto ram_usage = rlm.get_account_ram_usage(a);
+      control->get_resource_limits_manager().get_account_limits(a, ram_bytes, net, cpu);
+      return ram_bytes - ram_usage;
+   }
 
    action_result deposit(const account_name& owner, const asset& amount) {
       return push_action(name(owner), "deposit"_n, mvo()("owner", owner)("amount", amount));
