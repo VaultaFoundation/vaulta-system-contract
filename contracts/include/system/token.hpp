@@ -10,6 +10,7 @@ namespace system_token {
 
     struct [[eosio::table("accounts"), eosio::contract("system")]] account {
         asset    balance;
+        bool     released = false;
         uint64_t primary_key()const { return balance.symbol.code().raw(); }
     };
 
@@ -23,4 +24,13 @@ namespace system_token {
 
     typedef eosio::multi_index< "accounts"_n, account > accounts;
     typedef eosio::multi_index< "stat"_n, currency_stats > stats;
+
+
+    // These are for interacting with the eosio.token contract, as the account structure
+    // in this contract now differs to fix the RAM release bug.
+    struct standard_account {
+        asset    balance;
+        uint64_t primary_key()const { return balance.symbol.code().raw(); }
+    };
+    typedef eosio::multi_index< "accounts"_n, standard_account > standard_accounts;
 }

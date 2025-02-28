@@ -154,9 +154,17 @@ class [[eosio::contract("system")]] system_contract : public contract {
             const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
             check( from.balance.amount >= value.amount, "overdrawn balance" );
 
-            from_acnts.modify( from, owner, [&]( auto& a ) {
-                a.balance -= value;
-            });
+            if(!from.released){
+                from_acnts.erase( from );
+                from_acnts.emplace( owner, [&]( auto& a ){
+                    a.balance = from.balance - value;
+                    a.released = true;
+                });
+            } else {
+                from_acnts.modify( from, owner, [&]( auto& a ) {
+                    a.balance -= value;
+                });
+            }
         }
 
         // ----------------------------------------------------
@@ -336,7 +344,7 @@ class [[eosio::contract("system")]] system_contract : public contract {
 
         // Gets a given account's balance of EOS
         asset get_eos_balance(const name& account){
-            accounts acnts( "eosio.token"_n, account.value );
+            standard_accounts acnts( "eosio.token"_n, account.value );
             const auto& found = acnts.find( EOS.code().raw() );
             if(found == acnts.end()){
                 return asset(0, EOS);
