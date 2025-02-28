@@ -4,7 +4,6 @@
 #include <system/oldsystem.hpp>
 
 using namespace eosio;
-using namespace system_token;
 using namespace system_origin;
 
 /**
@@ -267,7 +266,7 @@ void system_contract::swap_after_forwarding(const name& account, const asset& qu
 
 // Gets a given account's balance of EOS
 asset system_contract::get_eos_balance(const name& account) {
-   standard_accounts acnts("eosio.token"_n, account.value);
+   eosio_token::accounts acnts("eosio.token"_n, account.value);
    const auto& found = acnts.find(EOS.code().raw());
    if (found == acnts.end()) {
       return asset(0, EOS);
