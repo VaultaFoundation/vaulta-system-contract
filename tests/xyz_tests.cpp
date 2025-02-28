@@ -794,7 +794,7 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
         }
     }
 
-   // Users opening a new XYZ balance should either prereleased if opening for themselves
+   // Users opening a new XYZ balance should be prereleased if opening for themselves
    {
         BOOST_REQUIRE_EQUAL(get_xyz_account_released(user3), -1);
         auto xyz_ram_before = get_account_ram(xyz_name);
