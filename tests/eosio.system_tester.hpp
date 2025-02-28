@@ -223,6 +223,13 @@ public:
    // --------------------
    // check token balances
    // --------------------
+   int8_t get_xyz_account_released(account_name account) const {
+      vector<char> data = get_row_by_account(xyz_name, account, "accounts"_n, account_name(xyz_symbol().to_symbol_code().value));
+      if (data.empty())
+         return -1;
+      return xyz_abi_ser.binary_to_variant("account", data, abi_serializer_max_time)["released"].as<int8_t>();
+   }
+
    asset get_balance(name code, account_name act, symbol token) const {
       vector<char> data = get_row_by_account(code, act, "accounts"_n, account_name(token.to_symbol_code().value));
       if (data.empty())

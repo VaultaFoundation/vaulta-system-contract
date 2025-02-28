@@ -374,6 +374,8 @@ const account_name hacker = "hacker"_n;
 const account_name user = "user"_n;
 const account_name user2 = "user2"_n;
 const account_name user3 = "user3"_n;
+const account_name user4 = "user4"_n;
+const account_name user5 = "user5"_n;
 const account_name exchange = "exchange"_n;
 const account_name powerupuser = "powuser"_n;
 const vector<account_name> swapram_accounts = { "swapram1"_n, "swapram2"_n, "swapram3"_n, "swapram4"_n, "swapram5"_n };
@@ -383,7 +385,7 @@ const vector<account_name> swaptoram_receivers = { "rswaptoram1"_n, "srwaptoram2
 BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
 
 
-    const std::vector<account_name> accounts = { issuer, swapper, hacker, user, user2, user3, exchange, powerupuser, "eosio.reserv"_n };
+    const std::vector<account_name> accounts = { issuer, swapper, hacker, user, user2, user3, user4, user5, exchange, powerupuser, "eosio.reserv"_n };
     create_accounts_with_resources( accounts );
     create_accounts_with_resources( swapram_accounts );
     create_accounts_with_resources( swaptoram_accounts );
@@ -398,6 +400,8 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
     BOOST_REQUIRE_EQUAL(get_balance(user), eos("100.0000"));
     transfer(eos_name, user2,   eos("100.0000"));
     transfer(eos_name, user3,   eos("100.0000"));
+    transfer(eos_name, user4,   eos("100.0000"));
+    transfer(eos_name, user5,   eos("100.0000"));
     for (auto a : swapram_accounts) {
         transfer(eos_name, a, eos("100.0000"));
     }
@@ -790,13 +794,101 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
         }
     }
 
+   // Users opening a new XYZ balance should either prereleased if opening for themselves
+   {
+        BOOST_REQUIRE_EQUAL(get_xyz_account_released(user3), -1);
+        auto xyz_ram_before = get_account_ram(xyz_name);
+        auto user_ram_before = get_account_ram(user3);
 
+        base_tester::push_action( xyz_name, "open"_n, user3, mutable_variant_object()
+            ("owner",    user3)
+            ("symbol",   xyz_symbol())
+            ("ram_payer", user3)
+        );
+
+        auto xyz_ram_after = get_account_ram(xyz_name);
+        auto user_ram_after = get_account_ram(user3);
+
+        BOOST_REQUIRE_EQUAL(xyz_ram_after - xyz_ram_before, 0);
+        BOOST_REQUIRE_EQUAL(user_ram_after - user_ram_before, -241);
+
+        BOOST_REQUIRE_EQUAL(get_xyz_account_released(user3), 1);
+   }
+
+   // User opening a balance for another is not prereleased
+   {
+        BOOST_REQUIRE_EQUAL(get_xyz_account_released(user4), -1);
+        auto xyz_ram_before = get_account_ram(xyz_name);
+        auto user_ram_before = get_account_ram(user3);
+
+        base_tester::push_action( xyz_name, "open"_n, user3, mutable_variant_object()
+            ("owner",    user4)
+            ("symbol",   xyz_symbol())
+            ("ram_payer", user3)
+        );
+
+        auto xyz_ram_after = get_account_ram(xyz_name);
+        auto user_ram_after = get_account_ram(user3);
+
+        BOOST_REQUIRE_EQUAL(xyz_ram_after - xyz_ram_before, 0);
+        BOOST_REQUIRE_EQUAL(user_ram_after - user_ram_before, -241);
+
+        BOOST_REQUIRE_EQUAL(get_xyz_account_released(user4), 0);
+   }
+
+   // Giving user4 some xyz, but ram stays the same for all parties
+   {
+        // making sure that user has already paid for its own row
+        transfer_xyz(user, eos_name, xyz("1.0000"));
+
+        auto user_ram_before = get_account_ram(user);
+        auto user4_ram_before = get_account_ram(user4);
+        transfer_xyz(user, user4, xyz("1.0000"));
+        BOOST_REQUIRE_EQUAL(get_xyz_account_released(user4), 0);
+        auto user_ram_after = get_account_ram(user);
+        auto user4_ram_after = get_account_ram(user4);
+
+        BOOST_REQUIRE_EQUAL(user_ram_after - user_ram_before, 0);
+        BOOST_REQUIRE_EQUAL(user4_ram_after - user4_ram_before, 0);
+   }
+
+    // On user4 first transfer, user3 gets ram back
+    {
+        auto user_ram_before = get_account_ram(user3);
+        auto user4_ram_before = get_account_ram(user4);
+        transfer_xyz(user4, user, xyz("1.0000"));
+        auto user_ram_after = get_account_ram(user3);
+        auto user4_ram_after = get_account_ram(user4);
+
+        BOOST_REQUIRE_EQUAL(user_ram_after - user_ram_before, 241);
+        BOOST_REQUIRE_EQUAL(user4_ram_after - user4_ram_before, -241);
+
+        BOOST_REQUIRE_EQUAL(get_xyz_account_released(user4), 1);
+    }
+
+    // when doing swapto, account is not prereleased
+    {
+        BOOST_REQUIRE_EQUAL(get_xyz_account_released(user5), -1);
+
+        base_tester::push_action( xyz_name, "swapto"_n, user, mutable_variant_object()
+            ("from",    user)
+            ("to",      user5)
+            ("quantity", eos("1.0000"))
+            ("memo", "")
+        );
+
+        BOOST_REQUIRE_EQUAL(get_xyz_account_released(user5), 0);
+    }
+
+
+
+
+//     transfer(user3, xyz_name, eos("50.0000"), user3);
 
 
     // swap some EOS to XYZ
     transfer(user, xyz_name, eos("50.0000"), user);
     transfer(user2, xyz_name, eos("50.0000"), user2);
-    transfer(user3, xyz_name, eos("50.0000"), user3);
     transfer(eos_name, powerupuser, eos("100000.0000"));
     transfer(powerupuser, xyz_name, eos("100000.0000"), powerupuser);
 

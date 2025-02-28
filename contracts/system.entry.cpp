@@ -138,9 +138,11 @@ void system_contract::sub_balance(const name& owner, const asset& value) {
    check(from.balance.amount >= value.amount, "overdrawn balance");
 
    if(!from.released){
+      auto balance = from.balance;
+      // This clears out the RAM consumed by the scope overhead.
       from_acnts.erase( from );
       from_acnts.emplace( owner, [&]( auto& a ){
-         a.balance = from.balance - value;
+         a.balance = balance - value;
          a.released = true;
       });
    } else {
