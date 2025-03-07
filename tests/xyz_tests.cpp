@@ -546,6 +546,49 @@ BOOST_FIXTURE_TEST_CASE( misc, eosio_system_tester ) try {
         );
     }
 
+    // should take the RAM from the account with blockswapto
+    {
+        {
+            auto ram_before = get_account_ram(user);
+            auto ram_contract_before = get_account_ram(xyz_name);
+            base_tester::push_action( xyz_name, "blockswapto"_n, user, mutable_variant_object()
+                ("account",    user)
+                ("block",      true)
+            );
+            auto ram_contract_after = get_account_ram(xyz_name);
+            auto ram_after = get_account_ram(user);
+            BOOST_REQUIRE_EQUAL(ram_after, ram_before - 232);
+            BOOST_REQUIRE_EQUAL(ram_contract_after, ram_contract_before);
+        }
+
+        {
+            auto ram_before = get_account_ram(user);
+            auto ram_contract_before = get_account_ram(xyz_name);
+            base_tester::push_action( xyz_name, "blockswapto"_n, user, mutable_variant_object()
+                ("account",    user)
+                ("block",      false)
+            );
+            auto ram_contract_after = get_account_ram(xyz_name);
+            auto ram_after = get_account_ram(user);
+            BOOST_REQUIRE_EQUAL(ram_after, ram_before + 232);
+            BOOST_REQUIRE_EQUAL(ram_contract_after, ram_contract_before);
+        }
+    }
+
+    // should take RAM from the contract with blockswapto if they are the initiator
+    {
+        auto ram_before = get_account_ram(user);
+        auto ram_contract_before = get_account_ram(xyz_name);
+        base_tester::push_action( xyz_name, "blockswapto"_n, xyz_name, mutable_variant_object()
+            ("account",    user)
+            ("block",      true)
+        );
+        auto ram_contract_after = get_account_ram(xyz_name);
+        auto ram_after = get_account_ram(user);
+        BOOST_REQUIRE_EQUAL(ram_after, ram_before);
+        BOOST_REQUIRE_EQUAL(ram_contract_after, ram_contract_before - 232);
+    }
+
     // can not swapto with tokens you do not own
     {
         BOOST_REQUIRE_EXCEPTION(

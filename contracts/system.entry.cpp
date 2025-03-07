@@ -178,15 +178,18 @@ void system_contract::on_transfer(const name& from, const name& to, const asset&
 // Allows an account to block themselves from being a recipient of the `swapto` action.
 void system_contract::blockswapto(const name& account, const bool block) {
    // The account owner or this contract can block or unblock an account.
-   if (!has_auth(get_self())) {
+   auto is_self = has_auth(get_self());
+   if (!is_self) {
       require_auth(account);
    }
 
    blocked_table _blocked(get_self(), get_self().value);
-   auto          itr = _blocked.find(account.value);
+   auto itr = _blocked.find(account.value);
    if (block) {
       if (itr == _blocked.end()) {
-         _blocked.emplace(account, [&](auto& b) { b.account = account; });
+         _blocked.emplace(is_self ? get_self() : account, [&](auto& b) {
+            b.account = account;
+        });
       }
    } else {
       if (itr != _blocked.end()) {
