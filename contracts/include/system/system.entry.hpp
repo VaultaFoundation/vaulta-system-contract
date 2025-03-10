@@ -63,7 +63,6 @@ public:
    [[eosio::action]] void transfer(const name& from, const name& to, const asset& quantity, const std::string& memo);
    [[eosio::action]] void open(const name& owner, const symbol& symbol, const name& ram_payer);
    [[eosio::action]] void close(const name& owner, const symbol& symbol);
-   [[eosio::action]] void retire(const name& owner, const asset& quantity, const std::string& memo);
 
    // ----------------------------------------------------
    // SWAP -----------------------------------------------
@@ -166,7 +165,6 @@ public:
    using ramburn_action      = eosio::action_wrapper<"ramburn"_n, &system_contract::ramburn>;
    using ramtransfer_action  = eosio::action_wrapper<"ramtransfer"_n, &system_contract::ramtransfer>;
    using refund_action       = eosio::action_wrapper<"refund"_n, &system_contract::refund>;
-   using retire_action       = eosio::action_wrapper<"retire"_n, &system_contract::retire>;
    using sellram_action      = eosio::action_wrapper<"sellram"_n, &system_contract::sellram>;
    using sellrex_action      = eosio::action_wrapper<"sellrex"_n, &system_contract::sellrex>;
    using setabi_action       = eosio::action_wrapper<"setabi"_n, &system_contract::setabi>;
