@@ -110,11 +110,6 @@ Example:
 }
 ```
 
-#### `retire(name owner, asset quantity, string memo)`
-
-The `retire` action retires (or "burns") tokens from the sender's account.
-This removes tokens from circulation and reduces the total supply.
-
 #### `open(name owner, symbol symbol, name ram_payer)`
 
 Opens a row in the `accounts` table for the specified account and symbol.

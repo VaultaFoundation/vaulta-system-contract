@@ -97,27 +97,6 @@ void system_contract::close(const name& owner, const symbol& symbol) {
    acnts.erase(it);
 }
 
-void system_contract::retire(const name& owner, const asset& quantity, const std::string& memo) {
-   auto sym = quantity.symbol;
-   check(sym.is_valid(), "invalid symbol name");
-   check(memo.size() <= 256, "memo has more than 256 bytes");
-
-   stats statstable(get_self(), sym.code().raw());
-   auto  existing = statstable.find(sym.code().raw());
-   check(existing != statstable.end(), "token with symbol does not exist");
-   const auto& st = *existing;
-
-   require_auth(st.issuer);
-   check(quantity.is_valid(), "invalid quantity");
-   check(quantity.amount > 0, "must retire positive quantity");
-
-   check(quantity.symbol == st.supply.symbol, "symbol precision mismatch");
-
-   statstable.modify(st, same_payer, [&](auto& s) { s.supply -= quantity; });
-
-   sub_balance(st.issuer, quantity);
-}
-
 void system_contract::add_balance(const name& owner, const asset& value, const name& ram_payer) {
    accounts to_acnts(get_self(), owner.value);
    auto     to = to_acnts.find(value.symbol.code().raw());
