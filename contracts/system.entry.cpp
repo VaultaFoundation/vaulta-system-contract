@@ -186,16 +186,16 @@ void system_contract::swapto(const name& from, const name& to, const asset& quan
 
    if (quantity.symbol == EOS) {
       // First swap the EOS to XYZ and credit it to the user
-      transfer_action("eosio.token"_n, {{from, "active"_n}}).send(from, get_self(), asset(quantity.amount, EOS), memo);
+      transfer_action("eosio.token"_n, {{from, "active"_n}}).send(from, get_self(), quantity, std::cref(memo));
 
       // Then transfer the swapped XYZ to the target account
-      transfer_action(get_self(), {{from, "active"_n}}).send(from, to, asset(quantity.amount, get_token_symbol()), memo);
+      transfer_action(get_self(), {{from, "active"_n}}).send(from, to, asset(quantity.amount, get_token_symbol()), std::cref(memo));
    } else if (quantity.symbol == get_token_symbol()) {
       // First swap the XYZ to EOS and credit it to the user
-      transfer_action(get_self(), {{from, "active"_n}}).send(from, get_self(), asset(quantity.amount, get_token_symbol()), memo);
+      transfer_action(get_self(), {{from, "active"_n}}).send(from, get_self(), quantity, std::cref(memo));
 
       // Then transfer the swapped EOS to the target account
-      transfer_action("eosio.token"_n, {{from, "active"_n}}).send(from, to, asset(quantity.amount, EOS), memo);
+      transfer_action("eosio.token"_n, {{from, "active"_n}}).send(from, to, asset(quantity.amount, EOS), std::cref(memo));
    } else {
       check(false, "Invalid symbol");
    }
@@ -333,14 +333,12 @@ void system_contract::buyrambytes(name payer, name receiver, uint32_t bytes) {
    const int64_t cost_plus_fee = cost / double(0.995);
 
    swap_before_forwarding(payer, asset(cost_plus_fee, get_token_symbol()));
-   // The balance will be the current + the swapped balance, it just hasn't inlined yet.
-   asset current_eos_balance = get_eos_balance(payer) + asset(cost_plus_fee, EOS);
 
    buyrambytes_action("eosio"_n, {{payer, "active"_n}}).send(payer, receiver, bytes);
 
-   // Removes the possibility of the user having more or less EOS than they should
-   // due to on_notify of the transfer or buyram.
-   enforcebal_action( get_self(), {{payer, "active"_n}}).send(payer, current_eos_balance - asset(cost_plus_fee, EOS));
+   // The user's balance should not have changed from the amount it was before
+   // any swaps took place.
+   enforcebal_action( get_self(), {{payer, "active"_n}}).send(payer, get_eos_balance(payer));
 }
 
 void system_contract::buyramself(const name& payer, const asset& quant) {
