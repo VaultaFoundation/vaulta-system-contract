@@ -102,9 +102,9 @@ public:
    [[eosio::action]] void mvtosavings(const name& owner, const asset& rex);
    [[eosio::action]] void sellrex(const name& from, const asset& rex);
    [[eosio::action]] void withdraw(const name& owner, const asset& amount);
-   [[eosio::action]] void newaccount(const name& creator, const name& account_name,
+   [[eosio::action]] void newaccount(const name& creator, const name& name,
                                      const system_origin::authority& owner, const system_origin::authority& active);
-   [[eosio::action]] void newaccount2(const name& creator, const name& account_name, eosio::public_key key);
+   [[eosio::action]] void newaccount2(const name& creator, const name& name, eosio::public_key key);
    [[eosio::action]] void powerup(const name& payer, const name& receiver, uint32_t days, int64_t net_frac,
                                   int64_t cpu_frac, const asset& max_payment);
    [[eosio::action]] void delegatebw(const name& from, const name& receiver, const asset& stake_net_quantity,
