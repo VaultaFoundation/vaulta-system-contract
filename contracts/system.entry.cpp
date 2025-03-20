@@ -402,18 +402,18 @@ void system_contract::withdraw(const name& owner, const asset& amount) {
    swap_after_forwarding(owner, asset(amount.amount, EOS));
 }
 
-void system_contract::newaccount(const name& creator, const name& account_name, const authority& owner,
+void system_contract::newaccount(const name& creator, const name& name, const authority& owner,
                                  const authority& active) {
    require_auth(creator);
-   newaccount_action("eosio"_n, {{creator, "active"_n}}).send(creator, account_name, std::cref(owner), std::cref(active));
+   newaccount_action("eosio"_n, {{creator, "active"_n}}).send(creator, name, std::cref(owner), std::cref(active));
 }
 
 // Simplified account creation action that only requires a public key instead of 2 authority objects
-void system_contract::newaccount2(const name& creator, const name& account_name, eosio::public_key key) {
+void system_contract::newaccount2(const name& creator, const name& name, eosio::public_key key) {
    require_auth(creator);
    authority auth{.threshold = 1, .keys = {{.key = key, .weight = 1}}};
 
-   newaccount_action("eosio"_n, {{creator, "active"_n}}).send(creator, account_name, auth, auth);
+   newaccount_action("eosio"_n, {{creator, "active"_n}}).send(creator, name, auth, auth);
 }
 
 void system_contract::powerup(const name& payer, const name& receiver, uint32_t days, int64_t net_frac,
