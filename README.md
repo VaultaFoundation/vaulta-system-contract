@@ -1,4 +1,4 @@
-# XYZ Token and System Docs
+# Vaulta Token and System Docs
 
 The XYZ (placeholder name) token is a replacement for the EOS token.
 
