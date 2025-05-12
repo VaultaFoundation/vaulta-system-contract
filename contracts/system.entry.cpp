@@ -1,3 +1,4 @@
+//contractName:system
 #include <system/system.entry.hpp>
 
 #include <system/token.hpp>
