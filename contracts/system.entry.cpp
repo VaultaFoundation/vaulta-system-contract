@@ -16,7 +16,7 @@ using namespace system_origin;
 void system_contract::init(asset maximum_supply) {
    require_auth(get_self());
    config_table _config(get_self(), get_self().value);
-   check(!_config.exists(), "This system contract is already initialized");
+   // check(!_config.exists(), "This system contract is already initialized");
 
    auto sym = maximum_supply.symbol;
    check(maximum_supply.is_valid(), "invalid supply");
