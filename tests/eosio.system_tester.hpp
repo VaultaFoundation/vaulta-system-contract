@@ -24,7 +24,7 @@ public:
    // -----------------
    // static utilities
    // -----------------
-   static constexpr account_name xyz_name = "xyz"_n;
+   static constexpr account_name xyz_name = "core.vaulta"_n;
    static constexpr account_name eos_name = "eosio"_n;
 
    static asset eos(const char* amount) { return core_sym::from_string(amount); }

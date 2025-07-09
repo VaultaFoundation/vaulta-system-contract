@@ -47,11 +47,11 @@ npx fuckyea deploy <network>
 
 You will need [`spring`](https://github.com/AntelopeIO/spring), and [`cdt`](https://github.com/AntelopeIO/cdt).
 
-You must have the [`eos-system-contracts`](https://github.com/eosnetworkfoundation/eos-system-contracts) locally, and built already.
+You must have the [`system-contracts`](https://github.com/VaultaFoundation/system-contracts) locally, and built already.
 Add their location to your path: 
 
 ```bash
-export SYSTEM_CONTRACTS_PATH=/path/to/eos-system-contracts/build
+export SYSTEM_CONTRACTS_PATH=/path/to/system-contracts/build
 ```
 
 Then create a build directory:
