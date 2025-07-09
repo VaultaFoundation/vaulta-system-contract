@@ -152,7 +152,7 @@ void system_contract::on_transfer(const name& from, const name& to, const asset&
 
    check(quantity.symbol == EOS, "Invalid symbol");
    asset swap_amount = asset(quantity.amount, get_token_symbol());
-   transfer_action(get_self(), {{get_self(), "active"_n}}).send(get_self(), from, swap_amount, std::string(""));
+   transfer_action(get_self(), {{get_self(), "active"_n}}).send(get_self(), from, swap_amount, std::cref(memo));
 }
 
 // Allows an account to block themselves from being a recipient of the `swapto` action.
