@@ -185,6 +185,19 @@ you must also track the `swaptrace` action on this contract.
 The `swaptrace` action happens when a system wrapper (see below) is called and the user has their $A swapped to $EOS 
 before calling a system action that needs to be paid in $EOS.
 
+Swaptrace will happen on: 
+- `bidname`
+- `buyram`
+- `buyramburn`
+- `buyrambytes`
+- `buyramself`
+- `deposit`
+- `powerup`
+- `delegatebw`
+- `donatetorex`
+
+The `swaptrace` action will log the swap that happened, and you can use this to track the balance of the user.
+
 ## System Wrapper
 
 The system wrapper is a set of actions that allows interaction with the system contracts using
