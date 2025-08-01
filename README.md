@@ -177,6 +177,14 @@ Examples:
 - **Exchange** uses `swapto` with `100 XYZ` as the quantity and **User** as the `to` account
 - The contract swaps the `100 XYZ` to `100 EOS` and sends it to **User**
 
+## Tracking Vaulta Balances
+
+You can track a Vaulta ($A) balance in the same way you track an `eosio.token` balance, with one small change where 
+you must also track the `swaptrace` action on this contract. 
+
+The `swaptrace` action happens when a system wrapper (see below) is called and the user has their $A swapped to $EOS 
+before calling a system action that needs to be paid in $EOS.
+
 ## System Wrapper
 
 The system wrapper is a set of actions that allows interaction with the system contracts using
